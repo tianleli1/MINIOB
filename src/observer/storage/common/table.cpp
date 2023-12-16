@@ -960,7 +960,7 @@ RC Table::drop(const char *path,const char *name,const char *base_dir,CLogManage
   
   //遍历并删除所有索引
   for(int i=0;i<table_meta_.index_num();i++){
-    delete indexes_[i];
+    ((BplusTreeIndex *)indexes_[i])->close();
     const IndexMeta *index_meta=table_meta_.index(i);
     std::string index_file_path=table_index_file(base_dir,name,index_meta->name());
     unlink(index_file_path.c_str());

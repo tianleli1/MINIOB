@@ -106,11 +106,12 @@ void ExecuteStage::cleanup()
   LOG_TRACE("Exit");
 }
 
+//ltlhasaquestionhere? how to get there. ltlhasaquestion? : how to get there
 void ExecuteStage::handle_event(StageEvent *event)
 {
   LOG_TRACE("Enter\n");
 
-  handle_request(event);
+  handle_request(event);//-> func: handle_request
 
   LOG_TRACE("Exit\n");
   return;
@@ -126,6 +127,7 @@ void ExecuteStage::callback_event(StageEvent *event, CallbackContext *context)
   return;
 }
 
+//core func
 void ExecuteStage::handle_request(common::StageEvent *event)
 {
   SQLStageEvent *sql_event = static_cast<SQLStageEvent *>(event);
@@ -134,8 +136,11 @@ void ExecuteStage::handle_request(common::StageEvent *event)
   Session *session = session_event->session();
   Query *sql = sql_event->query();
 
+  
+  
+
   if (stmt != nullptr) {
-    switch (stmt->type()) {
+    switch (stmt->type()) {//StmtType
     case StmtType::SELECT: {
       do_select(sql_event);
     } break;
@@ -153,7 +158,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
     } break;
     }
   } else {
-    switch (sql->flag) {
+    switch (sql->flag) {//SqlCommandFlag
     case SCF_HELP: {
       do_help(sql_event);
     } break;
@@ -170,8 +175,14 @@ void ExecuteStage::handle_request(common::StageEvent *event)
       do_desc_table(sql_event);
     } break;
 
-    case SCF_DROP_TABLE:
-    case SCF_DROP_INDEX:
+    //add case: drop table
+    case SCF_DROP_TABLE:{
+      do_drop_table(sql_event);
+      break;
+    }
+    // case SCF_DROP_INDEX:{
+    //   do_drop_index(sql_event);
+    // }
     case SCF_LOAD_DATA: {
       default_storage_stage_->handle_event(event);
     } break;
@@ -465,9 +476,22 @@ RC ExecuteStage::do_help(SQLStageEvent *sql_event)
 
 RC ExecuteStage::do_create_table(SQLStageEvent *sql_event)
 {
+  /*
+  //struct of craete_table (sstr.create_table)
+    name of table, count of columns, info of columns
+    typedef struct {
+      char *relation_name;           // Relation name
+      size_t attribute_count;        // Length of attribute
+      AttrInfo attributes[MAX_NUM];  // attributes
+    } CreateTable;
+  */
+  //get createtable object
   const CreateTable &create_table = sql_event->query()->sstr.create_table;
+  //following two statements are a whole: connecting db
   SessionEvent *session_event = sql_event->session_event();
   Db *db = session_event->session()->get_current_db();
+  //call function of creating table, parameter is the createtable object
+  //-> ../storege/common/db.cpp func: create_table
   RC rc = db->create_table(create_table.relation_name,
 			create_table.attribute_count, create_table.attributes);
   if (rc == RC::SUCCESS) {
@@ -479,15 +503,26 @@ RC ExecuteStage::do_create_table(SQLStageEvent *sql_event)
 }
 RC ExecuteStage::do_create_index(SQLStageEvent *sql_event)
 {
+  /*
+  //struct of create_index
+    typedef struct {
+      char *index_name;      // Index name
+      char *relation_name;   // Relation name
+      char *attribute_name;  // Attribute name
+    } CreateIndex;
+  */
+  //following two statements are a whole: connecting db
   SessionEvent *session_event = sql_event->session_event();
   Db *db = session_event->session()->get_current_db();
+  //get createindex object
   const CreateIndex &create_index = sql_event->query()->sstr.create_index;
+  //find corresponding table
   Table *table = db->find_table(create_index.relation_name);
   if (nullptr == table) {
     session_event->set_response("FAILURE\n");
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
-
+  //call function of creating index
   RC rc = table->create_index(nullptr, create_index.index_name, create_index.attribute_name);
   sql_event->session_event()->set_response(rc == RC::SUCCESS ? "SUCCESS\n" : "FAILURE\n");
   return rc;
@@ -692,3 +727,43 @@ RC ExecuteStage::do_clog_sync(SQLStageEvent *sql_event)
 
   return rc;
 }
+
+RC ExecuteStage::do_drop_table(SQLStageEvent *sql_event){
+  /*
+  struct of drop_table
+  typedef struct {
+    char *relation_name;  // Relation name
+  } DropTable;
+  */
+  //get drop table object
+  const DropTable &drop_table=sql_event->query()->sstr.drop_table; 
+  //connecting db
+  SessionEvent *session_event=sql_event->session_event();
+  Db *db=session_event->session()->get_current_db();
+  //call function of droping table
+  RC rc=db->drop_table(drop_table.relation_name);
+  if(rc==RC::SUCCESS){
+    session_event->set_response("SUCCESS\n");
+  } else{
+    session_event->set_response("FAILURE\n");
+  }
+  return rc;
+}
+
+// RC ExecuteStage::do_drop_index(SQLStageEvent *sql_event){
+//   /*
+//   //struct of  drop_index
+//     typedef struct {
+//       const char *index_name;  // Index name
+//     } DropIndex;
+//   */
+//   //connecting db
+//   SessionEvent *session_event=sql_event->session_event();
+//   Db *db=session_event->session()->get_current_db();
+//   //get dropindex object
+//   const DropIndex &drop_index=sql_event->query()->sstr.drop_index;
+//   //find corresponding table
+//   Table *table=db->find_table(drop_index.relation_name);
+//   //call function of droping index
+//   RC rc=table->drop_index();
+// }

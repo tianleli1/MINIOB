@@ -54,7 +54,7 @@ Table::~Table()
 RC Table::create(
     const char *path, const char *name, const char *base_dir, int attribute_count, const AttrInfo attributes[], CLogManager *clog_manager)
 {
-
+  //exam parameters valid
   if (common::is_blank(name)) {
     LOG_WARN("Name cannot be empty");
     return RC::INVALID_ARGUMENT;
@@ -70,12 +70,16 @@ RC Table::create(
 
   // 使用 table_name.table记录一个表的元数据
   // 判断表文件是否已经存在
+  //use path to open file
   int fd = ::open(path, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
+  //what does fd<0 mean? ltlhasaquestion 
   if (fd < 0) {
     if (EEXIST == errno) {
+      //already exist
       LOG_ERROR("Failed to create table file, it has been created. %s, EEXIST, %s", path, strerror(errno));
       return RC::SCHEMA_TABLE_EXIST;
     }
+    //other error
     LOG_ERROR("Create table file failed. filename=%s, errmsg=%d:%s", path, errno, strerror(errno));
     return RC::IOERR;
   }
@@ -85,9 +89,10 @@ RC Table::create(
   // 创建文件
   if ((rc = table_meta_.init(name, attribute_count, attributes)) != RC::SUCCESS) {
     LOG_ERROR("Failed to init table meta. name:%s, ret:%d", name, rc);
-    return rc;  // delete table file
+    return rc;  // delete table file later
   }
 
+  //open table file for write
   std::fstream fs;
   fs.open(path, std::ios_base::out | std::ios_base::binary);
   if (!fs.is_open()) {
@@ -99,6 +104,7 @@ RC Table::create(
   table_meta_.serialize(fs);
   fs.close();
 
+  //create disk buffer pool of data file
   std::string data_file = table_data_file(base_dir, name);
   BufferPoolManager &bpm = BufferPoolManager::instance();
   rc = bpm.create_file(data_file.c_str());
@@ -107,6 +113,7 @@ RC Table::create(
     return rc;
   }
 
+  //init record handler
   rc = init_record_handler(base_dir);
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to create table %s due to init record handler failed.", data_file.c_str());
@@ -114,6 +121,7 @@ RC Table::create(
     return rc;
   }
 
+  //?
   base_dir_ = base_dir;
   clog_manager_ = clog_manager;
   LOG_INFO("Successfully create table %s:%s", base_dir, name);
@@ -551,22 +559,25 @@ static RC insert_index_record_reader_adapter(Record *record, void *context)
 
 RC Table::create_index(Trx *trx, const char *index_name, const char *attribute_name)
 {
+  //goal: create index meta file -> .index
+  //exam parameters valid
   if (common::is_blank(index_name) || common::is_blank(attribute_name)) {
     LOG_INFO("Invalid input arguments, table name is %s, index_name is blank or attribute_name is blank", name());
     return RC::INVALID_ARGUMENT;
   }
+  //exam index exist
   if (table_meta_.index(index_name) != nullptr || table_meta_.find_index_by_field((attribute_name))) {
     LOG_INFO("Invalid input arguments, table name is %s, index %s exist or attribute %s exist index",
              name(), index_name, attribute_name);
     return RC::SCHEMA_INDEX_EXIST;
   }
-
+  //exam the attribute which index located on exist
   const FieldMeta *field_meta = table_meta_.field(attribute_name);
   if (!field_meta) {
     LOG_INFO("Invalid input arguments, there is no field of %s in table:%s.", attribute_name, name());
     return RC::SCHEMA_FIELD_MISSING;
   }
-
+  //init IndexMeta in table
   IndexMeta new_index_meta;
   RC rc = new_index_meta.init(index_name, *field_meta);
   if (rc != RC::SUCCESS) {
@@ -585,7 +596,7 @@ RC Table::create_index(Trx *trx, const char *index_name, const char *attribute_n
     return rc;
   }
 
-  // 遍历当前的所有数据，插入这个索引
+  // 遍历当前的所有数据 (records)，插入这个索引
   IndexInserter index_inserter(index);
   rc = scan_record(trx, nullptr, -1, &index_inserter, insert_index_record_reader_adapter);
   if (rc != RC::SUCCESS) {
@@ -596,13 +607,14 @@ RC Table::create_index(Trx *trx, const char *index_name, const char *attribute_n
   }
   indexes_.push_back(index);
 
+  //update meta file of table: add index info
   TableMeta new_table_meta(table_meta_);
   rc = new_table_meta.add_index(new_index_meta);
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to add index (%s) on table (%s). error=%d:%s", index_name, name(), rc, strrc(rc));
     return rc;
   }
-  // 创建元数据临时文件
+  // 创建元数据临时文件->.index
   std::string tmp_file = table_meta_file(base_dir_.c_str(), name()) + ".tmp";
   std::fstream fs;
   fs.open(tmp_file, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
@@ -925,3 +937,48 @@ RC Table::sync()
   LOG_INFO("Sync table over. table=%s", name());
   return rc;
 }
+
+RC Table::drop(const char *path,const char *name,const char *base_dir,CLogManager *clog_manager){
+  //exam parameters valid
+  if(common::is_blank(name)){
+    LOG_WARN("Name cannot be empty");
+    return RC::INVALID_ARGUMENT;
+  }
+  LOG_INFO("Begin to drop table %s:%s",base_dir,name);
+  RC rc=RC::SUCCESS;
+  /*
+  need to delete these files:
+  .table：元数据文件：关系的描述信息。包括关系名、属性个数、各属性的名称和数据类型等
+  .data: 数据文件
+  .index: 索引文件，索引文件可以没有，也可以有多个。
+  */
+  std::string table_file_path=table_meta_file(base_dir,name);
+  unlink(table_file_path.c_str());
+
+  std::string data_file_path=table_data_file(base_dir,name);
+  unlink(data_file_path.c_str());
+  
+  //遍历并删除所有索引
+  for(int i=0;i<table_meta_.index_num();i++){
+    delete indexes_[i];
+    const IndexMeta *index_meta=table_meta_.index(i);
+    std::string index_file_path=table_index_file(base_dir,name,index_meta->name());
+    unlink(index_file_path.c_str());
+  }
+  return rc;
+}
+
+// RC Table::drop_index(Trx *trx,const char *index_name){
+//   //goal: delete index meta file -> .index
+//   //exam parameters valid
+//   if(common::is_blank(index_name)){
+//     LOG_INFO("Invalid input arguments, index_name is blank");
+//     return RC::INVALID_ARGUMENT;
+//   }
+//   //exam index exist
+//   if(table_meta_.index(index_name)==nullptr){
+//     LOG_INFO("Invalid input arguments, index does not exist");
+//     return RC::SCHEMA_INDEX_EXIST;
+//   }
+//   //find the index from indexs
+// }

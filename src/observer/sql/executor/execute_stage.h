@@ -51,6 +51,8 @@ protected:
   RC do_commit(SQLStageEvent *sql_event);
   RC do_clog_sync(SQLStageEvent *sql_event);
 
+  RC do_drop_table(SQLStageEvent *sql_event);//add func: drop table
+
 protected:
 private:
   Stage *default_storage_stage_ = nullptr;

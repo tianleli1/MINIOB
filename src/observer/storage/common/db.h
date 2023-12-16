@@ -46,6 +46,8 @@ public:
 
   CLogManager *get_clog_manager();
 
+  RC drop_table(const char *table_name);//add func: drop table
+
 private:
   RC open_all_tables();
 

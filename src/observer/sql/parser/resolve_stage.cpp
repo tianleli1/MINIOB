@@ -93,6 +93,7 @@ void ResolveStage::handle_event(StageEvent *event)
     return;
   }
 
+  //connect db
   SessionEvent *session_event = sql_event->session_event();
 
   Db *db = session_event->session()->get_current_db();
@@ -101,16 +102,20 @@ void ResolveStage::handle_event(StageEvent *event)
     return ;
   }
 
-  Query *query = sql_event->query();
+  Query *query = sql_event->query();// get stmt type
   Stmt *stmt = nullptr;
-  RC rc = Stmt::create_stmt(db, *query, stmt);
+  //进一步处理 -> a new improved stmt
+  RC rc = Stmt::create_stmt(db, *query, stmt);//three parameters: db connection, query type, stmt
   if (rc != RC::SUCCESS && rc != RC::UNIMPLENMENT) {
     LOG_WARN("failed to create stmt. rc=%d:%s", rc, strrc(rc));
-    session_event->set_response("FAILURE\n");
+    session_event->set_response("FAILURE!\n");
     return;
   }
 
+  //update new stmt
   sql_event->set_stmt(stmt);
+
+  //actually will go to ./executor/execute_stage.cpp func: handle_event
 
   query_cache_stage_->handle_event(sql_event);
 

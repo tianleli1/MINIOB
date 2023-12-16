@@ -120,8 +120,12 @@ void ParseStage::callback_event(StageEvent *event, CallbackContext *context)
 
 RC ParseStage::handle_request(StageEvent *event)
 {
+  std::cout << "##start handling request" << std::endl;
+
+  //ParseStage负责对SQL命令字符串进行词法解析和语法解析，如果SQL命令语法正确，则将其转换成语法树（参见sql/parser/parse_defs.h，struct Query），然后将 SQLStageEvent 传递给 ResolverStage。
   SQLStageEvent *sql_event = static_cast<SQLStageEvent *>(event);
   const std::string &sql = sql_event->sql();
+  //std::cout << "##sql statement is: " << sql << std::endl;
 
   Query *query_result = query_create();
   if (nullptr == query_result) {
@@ -129,14 +133,17 @@ RC ParseStage::handle_request(StageEvent *event)
     return RC::INTERNAL;
   }
 
-  RC ret = parse(sql.c_str(), query_result);
+  //std::cout << "##start parsing ......" << std::endl;
+  RC ret = parse(sql.c_str(), query_result);//-> ./parse.cpp (func: RC parse) get stmt type
+  
   if (ret != RC::SUCCESS) {
     // set error information to event
-    sql_event->session_event()->set_response("Failed to parse sql\n");
+    sql_event->session_event()->set_response("Failed to parse sql!!!\n");
     query_destroy(query_result);
     return RC::INTERNAL;
   }
-
-  sql_event->set_query(query_result);
+  std::cout << "##successfully parse!" << std::endl;
+  sql_event->set_query(query_result);//-> ../event/sql_event.h set stmt type
+  //actually will go to -> ./resolve_stage.cpp func: handle_event ltlhasaquestion? : how to get there
   return RC::SUCCESS;
 }

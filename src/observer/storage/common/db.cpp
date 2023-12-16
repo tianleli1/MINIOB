@@ -70,7 +70,9 @@ RC Db::create_table(const char *table_name, int attribute_count, const AttrInfo 
   }
 
   // 文件路径可以移到Table模块
+  //get storge path
   std::string table_file_path = table_meta_file(path_.c_str(), table_name);
+  //create new table
   Table *table = new Table();
   rc = table->create(table_file_path.c_str(), table_name, path_.c_str(), attribute_count, attributes, get_clog_manager());
   if (rc != RC::SUCCESS) {
@@ -78,7 +80,7 @@ RC Db::create_table(const char *table_name, int attribute_count, const AttrInfo 
     delete table;
     return rc;
   }
-
+  //update opened table array
   opened_tables_[table_name] = table;
   LOG_INFO("Create table success. table name=%s", table_name);
   return RC::SUCCESS;
@@ -226,4 +228,28 @@ RC Db::recover()
 
 CLogManager *Db::get_clog_manager() {
   return clog_manager_;
+}
+
+RC Db::drop_table(const char* table_name){
+  RC rc=RC::SUCCESS;
+  //check table_name
+  if(opened_tables_.count(table_name)==0){
+    LOG_WARN("%s does not exist.", table_name);
+    std::cout<<"the table does not exist!"<<std::endl;
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+  //get storge path
+  std::string table_file_path=table_meta_file(path_.c_str(),table_name);
+  //get drop table
+  Table *table=opened_tables_[table_name];
+  //drop table
+  rc=table->drop(table_file_path.c_str(),table_name,path_.c_str(),get_clog_manager());
+  if(rc!=RC::SUCCESS){
+    LOG_ERROR("Failed to drop table %s", table_name);
+    return rc;
+  }
+  //update opened table array
+  opened_tables_.erase(table_name);
+  LOG_INFO("Create table success. table name=%s",table_name);
+  return RC::SUCCESS;
 }

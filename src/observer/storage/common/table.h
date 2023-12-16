@@ -74,7 +74,8 @@ public:
   {
     return record_handler_;
   }
-
+  RC drop(const char *path,const char *name,const char *base_dir,CLogManager *clog_manager);//add func:drop table
+  RC drop_index(Trx *trx,const char *index_name);//add func: drop index
 public:
   const char *name() const;
 

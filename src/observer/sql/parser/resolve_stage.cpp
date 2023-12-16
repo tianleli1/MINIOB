@@ -108,7 +108,7 @@ void ResolveStage::handle_event(StageEvent *event)
   RC rc = Stmt::create_stmt(db, *query, stmt);//three parameters: db connection, query type, stmt
   if (rc != RC::SUCCESS && rc != RC::UNIMPLENMENT) {
     LOG_WARN("failed to create stmt. rc=%d:%s", rc, strrc(rc));
-    session_event->set_response("FAILURE!\n");
+    session_event->set_response("FAILURE\n");
     return;
   }
 

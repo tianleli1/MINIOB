@@ -939,39 +939,33 @@ RC Table::sync()
 }
 
 RC Table::drop(const char *path,const char *name,const char *base_dir,CLogManager *clog_manager){
-  // 删除 meta 文件 即.table文件
-  std::string meta_path = table_meta_file(base_dir, name);
-  if (unlink(meta_path.c_str()) != 0) {
-    LOG_ERROR("Failed to remove meta file=%s, errno=%d", meta_path.c_str(), errno);
-    return RC::GENERIC_ERROR;
+  //exam parameters valid
+  if(common::is_blank(name)){
+    LOG_WARN("Name cannot be empty");
+    return RC::INVALID_ARGUMENT;
   }
+  LOG_INFO("Begin to drop table %s:%s",base_dir,name);
+  RC rc=RC::SUCCESS;
+  /*
+  need to delete these files:
+  .table：元数据文件：关系的描述信息。包括关系名、属性个数、各属性的名称和数据类型等
+  .data: 数据文件
+  .index: 索引文件，索引文件可以没有，也可以有多个。
+  */
+  std::string table_file_path=table_meta_file(base_dir,name);
+  unlink(table_file_path.c_str());
 
-  // 删除 data 文件 即.data文件
-  std::string data_file = table_data_file(base_dir, name);
-  if (unlink(data_file.c_str()) != 0) {
-    LOG_ERROR("Failed to remove data file=%s, errno=%d", data_file.c_str(), errno);
-    return RC::GENERIC_ERROR;
-  }
-
-  // 删除对应DiskBufferPool
-  BufferPoolManager &bpm = BufferPoolManager::instance();
-  if (bpm.close_file(data_file.c_str()) != RC::SUCCESS) {
-    LOG_ERROR("Failed to remove disk buffer pool file=%s, errno=%d", name, errno);
-    return RC::GENERIC_ERROR;
-  }
-
-  // 删除 index 文件
-  const int index_num = table_meta_.index_num();
-  for (int i = 0; i < index_num; i++) {  // 清理所有的索引相关文件数据与索引元数据
+  std::string data_file_path=table_data_file(base_dir,name);
+  unlink(data_file_path.c_str());
+  
+  //遍历并删除所有索引
+  for(int i=0;i<table_meta_.index_num();i++){
     ((BplusTreeIndex *)indexes_[i])->close();
-    const IndexMeta *index_meta = table_meta_.index(i);
-    std::string index_file = table_index_file(base_dir, name, index_meta->name());
-    if (unlink(index_file.c_str()) != 0) {
-      LOG_ERROR("Failed to remove index file=%s, errno=%d", index_file.c_str(), errno);
-      return RC::GENERIC_ERROR;
-    }
+    const IndexMeta *index_meta=table_meta_.index(i);
+    std::string index_file_path=table_index_file(base_dir,name,index_meta->name());
+    unlink(index_file_path.c_str());
   }
-  return RC::SUCCESS;
+  return rc;
 }
 
 // RC Table::drop_index(Trx *trx,const char *index_name){

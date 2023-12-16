@@ -178,7 +178,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
     //add case: drop table
     case SCF_DROP_TABLE:{
       do_drop_table(sql_event);
-    } break;
+    }break;
     // case SCF_DROP_INDEX:{
     //   do_drop_index(sql_event);
     // }

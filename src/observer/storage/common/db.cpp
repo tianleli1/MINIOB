@@ -241,7 +241,7 @@ RC Db::drop_table(const char* table_name){
   //get storge path
   std::string table_file_path=table_meta_file(path_.c_str(),table_name);
   //get drop table
-  Table *table=opened_tables_[table_name];
+  Table *table=find_table(table_name);
   //drop table
   rc=table->drop(table_file_path.c_str(),table_name,path_.c_str(),get_clog_manager());
   if(rc!=RC::SUCCESS){
@@ -251,5 +251,5 @@ RC Db::drop_table(const char* table_name){
   //update opened table array
   opened_tables_.erase(table_name);
   LOG_INFO("Create table success. table name=%s",table_name);
-  return RC::SUCCESS;
+  return rc;
 }

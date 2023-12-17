@@ -250,6 +250,6 @@ RC Db::drop_table(const char* table_name){
   }
   //update opened table array
   opened_tables_.erase(table_name);
-  LOG_INFO("Create table success. table name=%s",table_name);
+  LOG_INFO("Drop table success. table name=%s",table_name);
   return rc;
 }

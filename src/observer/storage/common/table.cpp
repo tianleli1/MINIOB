@@ -960,11 +960,23 @@ RC Table::drop(const char *path,const char *name,const char *base_dir,CLogManage
   
   //遍历并删除所有索引
   for(int i=0;i<table_meta_.index_num();i++){
-    ((BplusTreeIndex *)indexes_[i])->close();
+    delete indexes_[i];
     const IndexMeta *index_meta=table_meta_.index(i);
     std::string index_file_path=table_index_file(base_dir,name,index_meta->name());
     unlink(index_file_path.c_str());
   }
+  /*还要清理缓存池,对应create函数中：
+  //create disk buffer pool of data file
+  std::string data_file = table_data_file(base_dir, name);
+  BufferPoolManager &bpm = BufferPoolManager::instance();
+  rc = bpm.create_file(data_file.c_str());
+  if (rc != RC::SUCCESS) {
+    LOG_ERROR("Failed to create disk buffer pool of data file. file name=%s", data_file.c_str());
+    return rc;
+  }
+  */
+  BufferPoolManager &bpm = BufferPoolManager::instance();
+  bpm.close_file(data_file_path.c_str());
   return rc;
 }
 

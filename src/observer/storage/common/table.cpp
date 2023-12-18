@@ -656,6 +656,46 @@ RC Table::update_record(Trx *trx, const char *attribute_name, const Value *value
   return RC::GENERIC_ERROR;
 }
 
+RC Table::update_record(Trx *trx, Record *record, const char *attribute_name, const Value *value)//modify update_record
+{
+  //TODO real update record functoin
+  // Update the record
+  const int normal_field_start_index = table_meta_.sys_field_num();
+  for (int i = normal_field_start_index; i < table_meta_.field_num(); i++) {
+    const FieldMeta *field = table_meta_.field(i);
+    if (0 != strcmp(field->name(), attribute_name)) {
+      continue;
+    }
+
+    if (field->type() != value->type) {
+      LOG_ERROR("Invalid value type. table name =%s, field name=%s, type=%d, but given=%d",
+          table_meta_.name(),
+          field->name(),
+          field->type(),
+          value->type);
+      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+    }
+
+    size_t copy_len = field->len();
+    if (field->type() == CHARS) {
+      const size_t data_len = strlen((const char *)value->data);
+      if (copy_len > data_len) {
+        copy_len = data_len + 1;
+      }
+    }
+    memcpy(record->data() + field->offset(), value->data, copy_len);
+    break;
+  }
+  RC rc = RC::SUCCESS;
+  if (trx != nullptr) {
+    // TODO: trx support update record
+  } else {
+    // TODO: update entry of indexes
+    rc = record_handler_->update_record(record);
+  }
+  return rc;
+}
+
 class RecordDeleter {
 public:
   RecordDeleter(Table &table, Trx *trx) : table_(table), trx_(trx)

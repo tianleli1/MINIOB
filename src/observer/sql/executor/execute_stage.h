@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/seda/stage.h"
 #include "sql/parser/parse.h"
 #include "rc.h"
+#include "sql/stmt/update_stmt.h"//add update
 
 class SQLStageEvent;
 class SessionEvent;
@@ -52,6 +53,7 @@ protected:
   RC do_clog_sync(SQLStageEvent *sql_event);
 
   RC do_drop_table(SQLStageEvent *sql_event);//add func: drop table
+  RC do_update(UpdateStmt *stmt,SessionEvent *session_event);//add func: undate
 
 protected:
 private:

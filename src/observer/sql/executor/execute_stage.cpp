@@ -46,6 +46,8 @@ See the Mulan PSL v2 for more details. */
 #include "storage/trx/trx.h"
 #include "storage/clog/clog.h"
 
+#include "sql/operator/update_operator.h"//add UpdateOperator
+
 using namespace common;
 
 //RC create_selection_executor(
@@ -148,7 +150,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
       do_insert(sql_event);
     } break;
     case StmtType::UPDATE: {
-      //do_update((UpdateStmt *)stmt, session_event);
+      do_update((UpdateStmt *)stmt, session_event);
     } break;
     case StmtType::DELETE: {
       do_delete(sql_event);
@@ -766,3 +768,24 @@ RC ExecuteStage::do_drop_table(SQLStageEvent *sql_event){
 //   //call function of droping index
 //   RC rc=table->drop_index();
 // }
+RC ExecuteStage::do_update(UpdateStmt *stmt,SessionEvent *session_event){
+  if (stmt == nullptr) {
+    LOG_WARN("cannot find statement");
+    return RC::GENERIC_ERROR;
+  }
+
+  UpdateStmt *update_stmt = (UpdateStmt *)stmt;
+  TableScanOperator scan_oper(update_stmt->table());
+  PredicateOperator pred_oper(update_stmt->filter_stmt());
+  pred_oper.add_child(&scan_oper);
+  UpdateOperator update_oper(update_stmt);
+  update_oper.add_child(&pred_oper);
+
+  RC rc = update_oper.open();
+  if (rc != RC::SUCCESS) {
+    session_event->set_response("FAILURE\n");
+  } else {
+    session_event->set_response("SUCCESS\n");
+  }
+  return rc;
+}

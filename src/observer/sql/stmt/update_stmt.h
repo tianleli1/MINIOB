@@ -17,26 +17,39 @@ See the Mulan PSL v2 for more details. */
 #include "rc.h"
 #include "sql/stmt/stmt.h"
 
+//完善update_stmt,仿照select_stmt和delete_stmt
+
 class Table;
+class FilterStmt;//add filter
 
 class UpdateStmt : public Stmt
 {
 public:
 
   UpdateStmt() = default;
-  UpdateStmt(Table *table, Value *values, int value_amount);
+  //UpdateStmt(Table *table, Value *values, int value_amount);
+  
+  UpdateStmt(Table *table,char *field_name,Value *values,FilterStmt *filter_stmt);//完善update_stmt
+  ~UpdateStmt() override;//完善update_stmt
+  StmtType type() const override { return StmtType::UPDATE; }//完善update_stmt,返回语句类型
 
 public:
-  static RC create(Db *db, const Updates &update_sql, Stmt *&stmt);
+  static RC create(Db *db, const Updates &update_sql, Stmt *&stmt);//根据sql指令创建update语句对象
 
 public:
-  Table *table() const {return table_;}
+  Table *table() const {return table_;}//返回对应表
   Value *values() const { return values_; }
   int value_amount() const { return value_amount_; }
+
+  char *field_name() const {return field_name_;}//add field name
+  FilterStmt *filter_stmt() const {return filter_stmt_;}//add filter
 
 private:
   Table *table_ = nullptr;
   Value *values_ = nullptr;
   int value_amount_ = 0;
+
+  char *field_name_ = nullptr;//add field name
+  FilterStmt *filter_stmt_ = nullptr;//add filter
 };
 

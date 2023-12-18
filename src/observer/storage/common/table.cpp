@@ -670,7 +670,7 @@ RC Table::update_record(Trx *trx, Record *record, const char *attribute_name, co
   //根据attribute_name找到对应的field,模仿Table::make_record
   for (int i=table_meta_.sys_field_num();i<table_meta_.field_num();i++) {
     const FieldMeta *field = table_meta_.field(i);
-    if (strcmp(field->name(), attribute_name==0) {
+    if (strcmp(field->name(), attribute_name)==0) {
       //找到目的属性，检查类型是否与输入值value一致,模仿Table::make_record
       if (field->type() != value->type) {
         LOG_ERROR("Invalid value type. table name =%s, field name=%s, type=%d, but given=%d",table_meta_.name(),field->name(),field->type(),value->type);

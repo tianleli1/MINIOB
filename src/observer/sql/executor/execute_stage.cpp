@@ -150,6 +150,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
       do_insert(sql_event);
     } break;
     case StmtType::UPDATE: {
+      //增加update的case，解开注释即可
       do_update((UpdateStmt *)stmt, session_event);
     } break;
     case StmtType::DELETE: {
@@ -768,23 +769,31 @@ RC ExecuteStage::do_drop_table(SQLStageEvent *sql_event){
 //   //call function of droping index
 //   RC rc=table->drop_index();
 // }
+
+//完全仿照do_delete函数即可，但需要先实现UpdateOperator，实现方法也仿照deleteoperator和select
 RC ExecuteStage::do_update(UpdateStmt *stmt,SessionEvent *session_event){
+  //检查是否是空对象
   if (stmt == nullptr) {
     LOG_WARN("cannot find statement");
     return RC::GENERIC_ERROR;
   }
+  //以下是一个复用性很强的过程，delete、select等过程中都用以下过程，直接套用
+  TableScanOperator scan_oper(stmt->table());//表扫描操作对象，扫描记录
+  PredicateOperator pred_oper(stmt->filter_stmt());//对记录进行过滤，对象的.next()方法对记录进行过滤，找到满足条件的记录
+  pred_oper.add_child(&scan_oper);//pred_oper对象的方法总是调用第一个孩子的方法，所以要添加children
+  UpdateOperator update_oper(update_stmt);//同上
+  update_oper.add_child(&pred_oper);//同上，调用孩子的方法
+  //将表扫描操作符添加为谓词操作符的子操作符，将谓词操作符添加为删除操作符的子操作符，形成操作符之间的关联关系。
+  //完成了一个类似树数据结构的调用过程：UpdateOperator -> PredicateOperator -> TableScanOperator
+  //执行过程反过来，从树的叶子节点往上
+  //因此，构建执行过程的方法很简单，重点是得实现UpdateOperator和table.cpp中更新记录方法
 
-  UpdateStmt *update_stmt = (UpdateStmt *)stmt;
-  TableScanOperator scan_oper(update_stmt->table());
-  PredicateOperator pred_oper(update_stmt->filter_stmt());
-  pred_oper.add_child(&scan_oper);
-  UpdateOperator update_oper(update_stmt);
-  update_oper.add_child(&pred_oper);
-
+  //执行更新
   RC rc = update_oper.open();
   if (rc != RC::SUCCESS) {
     session_event->set_response("FAILURE\n");
   } else {
+    //成功执行，此处有针对事务的处理。可以不做，因为暂时没有需求
     session_event->set_response("SUCCESS\n");
   }
   return rc;

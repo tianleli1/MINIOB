@@ -17,7 +17,8 @@ See the Mulan PSL v2 for more details. */
 #include "rc.h"
 #include "sql/stmt/stmt.h"
 
-//完善update_stmt,仿照select_stmt和delete_stmt
+//需要首先完善update_stmt，update语句创建、updateoperator等都依赖于此类
+//仿照select_stmt和delete_stmt
 
 class Table;
 class FilterStmt;//add filter

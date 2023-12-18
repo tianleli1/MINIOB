@@ -656,43 +656,34 @@ RC Table::update_record(Trx *trx, const char *attribute_name, const Value *value
   return RC::GENERIC_ERROR;
 }
 
+//update重点之一：实现（重载）update_record。更新记录，被UpdateOperator::open()调用
+//几乎完全模仿Table::make_record
 RC Table::update_record(Trx *trx, Record *record, const char *attribute_name, const Value *value)//modify update_record
 {
-  //TODO real update record functoin
-  // Update the record
-  const int normal_field_start_index = table_meta_.sys_field_num();
-  for (int i = normal_field_start_index; i < table_meta_.field_num(); i++) {
+  /*
+  四个参数：
+  trx:事务相关对象，暂不需要考虑，nullptr
+  record:单条记录
+  attribute_name:要更新的属性名，只需要考虑单列更新
+  value:要更新的值
+  */
+  //根据attribute_name找到对应的field,模仿Table::make_record
+  for (int i=table_meta_.sys_field_num();i<table_meta_.field_num();i++) {
     const FieldMeta *field = table_meta_.field(i);
-    if (0 != strcmp(field->name(), attribute_name)) {
-      continue;
-    }
-
-    if (field->type() != value->type) {
-      LOG_ERROR("Invalid value type. table name =%s, field name=%s, type=%d, but given=%d",
-          table_meta_.name(),
-          field->name(),
-          field->type(),
-          value->type);
-      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
-    }
-
-    size_t copy_len = field->len();
-    if (field->type() == CHARS) {
-      const size_t data_len = strlen((const char *)value->data);
-      if (copy_len > data_len) {
-        copy_len = data_len + 1;
+    if (strcmp(field->name(), attribute_name==0) {
+      //找到目的属性，检查类型是否与输入值value一致,模仿Table::make_record
+      if (field->type() != value->type) {
+        LOG_ERROR("Invalid value type. table name =%s, field name=%s, type=%d, but given=%d",table_meta_.name(),field->name(),field->type(),value->type);
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
       }
+      //类型一致，修改record的field值为value
+      size_t copy_len = field->len();
+      memcpy(record + field->offset(), value.data, copy_len);
+      break;
     }
-    memcpy(record->data() + field->offset(), value->data, copy_len);
-    break;
   }
-  RC rc = RC::SUCCESS;
-  if (trx != nullptr) {
-    // TODO: trx support update record
-  } else {
-    // TODO: update entry of indexes
-    rc = record_handler_->update_record(record);
-  }
+  //调用更底层接口完成更新
+  RC rc = record_handler_->update_record(record);
   return rc;
 }
 

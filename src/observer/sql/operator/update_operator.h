@@ -3,7 +3,8 @@
 #include "sql/operator/operator.h"
 #include "rc.h"
 
-//模仿DeleteOperator
+//Update的重点之一，实现更新算子
+//几乎直接模仿DeleteOperator就行，不需要trx，因为暂时没有事务相关需求
 
 //class Trx;
 class UpdateStmt;

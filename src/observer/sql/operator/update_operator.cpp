@@ -5,7 +5,8 @@
 //#include "storage/trx/trx.h"
 #include "sql/stmt/update_stmt.h"
 
-////模仿DeleteOperator
+//Update的重点之一，实现更新算子
+//几乎直接模仿DeleteOperator就行，不需要trx，因为暂时没有事务相关需求
 UpdateOperator::UpdateOperator(UpdateStmt *update_stmt) : update_stmt_(update_stmt){}
 UpdateOperator::~UpdateOperator(){}
 RC UpdateOperator::open()
@@ -34,6 +35,8 @@ RC UpdateOperator::open()
     Record &record = row_tuple->record();
     //rc = table->update_record(nullptr, &record);
     //use update_record
+
+    //以上与deleteoperator完全一致，但是接下来要调用table->update_record。只有此处要修改
     auto attr_name = update_stmt_->field_name();
     auto value = update_stmt_->values();
     rc = table->update_record(nullptr, &record, attr_name, value);

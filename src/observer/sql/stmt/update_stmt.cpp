@@ -42,15 +42,15 @@ RC UpdateStmt::create(Db *db, const Updates &update_sql, Stmt *&stmt)
     return RC::INVALID_ARGUMENT;
   }
 
-  //检查要更新的表和字段是否合法，即数据库中是否存在对应的表和字段。
-  // check whether the table exists: same as delete_stmt.cpp
+  //创建语句时就实现：检查要更新的表和字段是否合法，即数据库中是否存在对应的表和字段。
+  // check whether the table exists: 与delete_stmt.cpp一样
   Table *table = db->find_table(table_name);
   if (nullptr == table) {
     LOG_WARN("no such table");
     return RC::SCHEMA_TABLE_NOT_EXIST;
   }
 
-  // check whether the field exists: same as select_stmt.cpp
+  // check whether the field exists: 与select_stmt.cpp一样
   const char *field_name = update_sql.attribute_name;
   const FieldMeta *field_meta = table->table_meta().field(field_name);
   if (nullptr == field_meta) {
@@ -58,7 +58,7 @@ RC UpdateStmt::create(Db *db, const Updates &update_sql, Stmt *&stmt)
       return RC::SCHEMA_FIELD_MISSING;
   }
 
-  // get filter_stmt, same as delete_stmt.cpp
+  // get filter_stmt, 与delete_stmt.cpp一样
   std::unordered_map<std::string, Table *> table_map;
   table_map.insert(std::pair<std::string, Table *>(std::string(table_name), table));
 

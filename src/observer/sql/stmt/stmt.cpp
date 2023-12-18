@@ -17,7 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/insert_stmt.h"
 #include "sql/stmt/delete_stmt.h"
 #include "sql/stmt/select_stmt.h"
-#include "sql/stmt/update_stmt.h"
+#include "sql/stmt/update_stmt.h"//update库文件
 
 RC Stmt::create_stmt(Db *db, const Query &query, Stmt *&stmt)
 {
@@ -34,6 +34,11 @@ RC Stmt::create_stmt(Db *db, const Query &query, Stmt *&stmt)
   case SCF_SELECT: {
     return SelectStmt::create(db, query.sstr.selection, stmt);
   }
+  /*
+  增加update语句的创建，在resolve_stage.cpp中需要根据sql语句创建特定数据结构的stmt对象
+  即：RC rc = Stmt::create_stmt(db, *query, stmt);
+  方法与其他完全一样
+  */
   case SCF_UPDATE: {
     return UpdateStmt::create(db, query.sstr.update, stmt);
   }

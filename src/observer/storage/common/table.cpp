@@ -678,7 +678,7 @@ RC Table::update_record(Trx *trx, Record *record, const char *attribute_name, co
       }
       //类型一致，修改record的field值为value
       size_t copy_len = field->len();
-      memcpy(record + field->offset(), value.data, copy_len);
+      memcpy(record + field->offset(), value->data, copy_len);
       break;
     }
   }

@@ -781,7 +781,7 @@ RC ExecuteStage::do_update(UpdateStmt *stmt,SessionEvent *session_event){
   TableScanOperator scan_oper(stmt->table());//表扫描操作对象，扫描记录
   PredicateOperator pred_oper(stmt->filter_stmt());//对记录进行过滤，对象的.next()方法对记录进行过滤，找到满足条件的记录
   pred_oper.add_child(&scan_oper);//pred_oper对象的方法总是调用第一个孩子的方法，所以要添加children
-  UpdateOperator update_oper(update_stmt);//同上
+  UpdateOperator update_oper(stmt);//同上
   update_oper.add_child(&pred_oper);//同上，调用孩子的方法
   //将表扫描操作符添加为谓词操作符的子操作符，将谓词操作符添加为删除操作符的子操作符，形成操作符之间的关联关系。
   //完成了一个类似树数据结构的调用过程：UpdateOperator -> PredicateOperator -> TableScanOperator

@@ -678,7 +678,14 @@ RC Table::update_record(Trx *trx, Record *record, const char *attribute_name, co
       }
       //类型一致，修改record的field值为value
       size_t copy_len = field->len();
-
+      //跟make_record一样:判断类型是否为chars，如果数据类型为chars，则是不定长类型，需要特别计算实际长度
+      if (field->type() == CHARS) {
+        //计算实际长度，使用strlen函数(默认是字符串)
+        const size_t data_len = strlen((const char *)value->data);
+        if (copy_len > data_len) {
+          copy_len = data_len + 1;//+1来确保复制整个字符串，包括null结尾符
+        }
+      }
       memcpy(record->data() + field->offset(), value->data, copy_len);
       break;
     }

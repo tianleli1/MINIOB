@@ -57,6 +57,75 @@ void value_init_string(Value *value, const char *v)
   value->type = CHARS;
   value->data = strdup(v);
 }
+//增加date类型数据的初始化
+//int value_init_date(Value *value, char * year,char *month,char* day)
+int value_init_date(Value *value, const char * v)
+{
+  value->type=DATES;
+  //把原始字符串拆分成年月日
+  int index_1=-1,index_2=-1;
+  for(int i=0;i<strlen(v);i++){
+    if(v[i]=='-'){
+      if (index_1==-1){
+        index_1=i;
+      }else{
+        if(index_2==-1){
+          index_2=i;
+        }else{
+          break;
+        }
+      }
+    }
+  }
+  int i,j=0;
+  char *year=(char*)malloc(sizeof(char)*(index_1+1));
+  for (i = 0; i < index_1; i++) {
+    year[j++] = v[i];
+  }
+  year[j]=0;
+  j=0;
+  char *month=(char*)malloc(sizeof(char)*(index_2-index_1));
+  for (i = index_1+1; i < index_2; i++) {
+    month[j++] = v[i];
+  }
+  month[j]=0;
+  j=0;
+  char *day=(char*)malloc(sizeof(char)*(strlen(v)-index_2));
+  for (i = index_2+1; i < strlen(v); i++) {
+    day[j++] = v[i];
+  }
+  day[j]=0;
+  //把年月日变成整型
+  int year_int,month_int,day_int;
+  sscanf(year,"%d",&year_int);
+  sscanf(month,"%d",&month_int);
+  sscanf(day,"%d",&day_int);
+  //检查是否有效
+  int months[]={0,31,28,31,30,31,30,31,31,30,31,30,31};
+  if(month_int==2){
+    if(year_int%400==0||(year_int%100!=0&&year_int%4==0)){
+      if(day_int>29){
+        LOG_WARN("Invalid Date");
+        return -1;
+      }
+    }else{
+      if(day_int>28){
+        LOG_WARN("Invalid Date");
+        return -1;
+      }
+    }
+  }else{
+    if(day_int>months[month_int]){
+      LOG_WARN("Invalid Date");
+      return -1;
+    }
+  }
+  //计算八位整型时间并初始化value->data
+  int time_int=year_int*10000+month_int*100+day_int;
+  value->data=malloc(sizeof(time_int));
+  memcpy(value->data, &time_int, sizeof(time_int));
+  return 0;
+}
 void value_destroy(Value *value)
 {
   value->type = UNDEFINED;
@@ -398,8 +467,8 @@ extern "C" int sql_parse(const char *st, Query *sqls);
 
 RC parse(const char *st, Query *sqln)
 {
-  sql_parse(st, sqln);
-
+  std::cout << "##sql statement is: " << st << std::endl;
+  sql_parse(st, sqln);//-> ./yacc_sql.tab.c func: int sql_parse
   if (sqln->flag == SCF_ERROR)
     return SQL_SYNTAX;
   else

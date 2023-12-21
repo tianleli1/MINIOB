@@ -71,7 +71,9 @@ QUOTE            [\'\"]
 [Ll][Oo][Aa][Dd]                                     RETURN_TOKEN(LOAD);
 [Dd][Aa][Tt][Aa]                                     RETURN_TOKEN(DATA);
 [Ii][Nn][Ff][Ii][Ll][Ee]                             RETURN_TOKEN(INFILE);
+[Dd][Aa][Tt][Ee]                                     RETURN_TOKEN(DATE_T);// should before ID
 {ID}                                                 yylval->string=strdup(yytext); RETURN_TOKEN(ID);
+{QUOTE}([0-9]{4})\-(0?[1-9]|1[012])\-(0?[1-9]|1[012]){QUOTE}     yylval->string=strdup(yytext); RETURN_TOKEN(DATE_S); //add date
 "("                                                  RETURN_TOKEN(LBRACE);
 ")"                                                  RETURN_TOKEN(RBRACE);
 

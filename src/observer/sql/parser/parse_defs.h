@@ -45,7 +45,8 @@ typedef enum
   UNDEFINED,
   CHARS,
   INTS,
-  FLOATS
+  FLOATS,
+  DATES
 } AttrType;
 
 //属性值
@@ -174,6 +175,7 @@ enum SqlCommandFlag {
   SCF_HELP,
   SCF_EXIT
 };
+//ParseStage负责对SQL命令字符串进行词法解析和语法解析，如果SQL命令语法正确，则将其转换成语法树（参见sql/parser/parse_defs.h，struct Query），然后将 SQLStageEvent 传递给 ResolverStage。
 // struct of flag and sql_struct
 typedef struct Query {
   enum SqlCommandFlag flag;
@@ -190,6 +192,7 @@ void relation_attr_destroy(RelAttr *relation_attr);
 void value_init_integer(Value *value, int v);
 void value_init_float(Value *value, float v);
 void value_init_string(Value *value, const char *v);
+int value_init_date(Value *value, const char * v);//增加date类型数据的初始化
 void value_destroy(Value *value);
 
 void condition_init(Condition *condition, CompOp comp, int left_is_attr, RelAttr *left_attr, Value *left_value,

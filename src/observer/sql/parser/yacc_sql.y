@@ -317,7 +317,10 @@ value:
 		}
 	|DATE_S {
 			$1 = substr($1,1,strlen($1)-2);
-  		value_init_date(&CONTEXT->values[CONTEXT->value_length++], $1);
+  		//value_init_date(&CONTEXT->values[CONTEXT->value_length++], $1);
+		if (value_init_date(&CONTEXT->values[CONTEXT->value_length++], $1)==-1){
+				return -1;
+			}
 		}
     ;
     

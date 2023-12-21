@@ -103,6 +103,11 @@ int value_init_date(Value *value, const char * v)
   sscanf(day,"%d",&day_int);
   //检查是否有效
   int months[]={0,31,28,31,30,31,30,31,31,30,31,30,31};
+  if(year_int<=0||month_int<=0||month_int>12){//月份要在1-12间
+    LOG_WARN("Invalid Date");
+    std::cout << "date invalid" << std::endl;
+    return -1;
+  }
   if(month_int==2){
     if(year_int%400==0||(year_int%100!=0&&year_int%4==0)){
       if(day_int>29){

@@ -61,6 +61,7 @@ void value_init_string(Value *value, const char *v)
 //int value_init_date(Value *value, char * year,char *month,char* day)
 int value_init_date(Value *value, const char * v)
 {
+  std::cout << "start initialize and exam date......" << std::endl;
   value->type=DATES;
   //把原始字符串拆分成年月日
   int index_1=-1,index_2=-1;
@@ -106,17 +107,20 @@ int value_init_date(Value *value, const char * v)
     if(year_int%400==0||(year_int%100!=0&&year_int%4==0)){
       if(day_int>29){
         LOG_WARN("Invalid Date");
+        std::cout << "date invalid" << std::endl;
         return -1;
       }
     }else{
       if(day_int>28){
         LOG_WARN("Invalid Date");
+        std::cout << "date invalid" << std::endl;
         return -1;
       }
     }
   }else{
     if(day_int>months[month_int]){
       LOG_WARN("Invalid Date");
+      std::cout << "date invalid" << std::endl;
       return -1;
     }
   }
@@ -124,6 +128,7 @@ int value_init_date(Value *value, const char * v)
   int time_int=year_int*10000+month_int*100+day_int;
   value->data=malloc(sizeof(time_int));
   memcpy(value->data, &time_int, sizeof(time_int));
+  std::cout << "date valid!" << std::endl;
   return 0;
 }
 void value_destroy(Value *value)

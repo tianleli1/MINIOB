@@ -37,11 +37,19 @@ void TupleCell::to_string(std::ostream &os) const
     }
   } break;
   case DATES:{//增加case：date
+    //注意：输出月份、天数前面要补零!!!
     int year=*(int*)data_/10000;
     int month=(*(int*)data_-year*10000)/100;
     int day=*(int*)data_-year*10000-month*100;
-    //os<<year<<"-"<<(month<10?"0":"")<<month<<"-"<<(day<10?"0":"")<<day;
-    os<<year<<"-"<<month<<"-"<<day;
+    if(month<10 && day<10){
+      os<<year<<"-0"<<month<<"-0"<<day;
+    }else if(month<10){
+      os<<year<<"-0"<<month<<"-"<<day;
+    }else if(day<10){
+      os<<year<<"-"<<month<<"-0"<<day;
+    }else{
+      os<<year<<"-"<<month<<"-"<<day;
+    }
   }break;
   default: {
     LOG_WARN("unsupported attr type: %d", attr_type_);

@@ -47,6 +47,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/clog/clog.h"
 
 #include "sql/operator/update_operator.h"//add UpdateOperator
+#include "sql/operator/join_operator.h"
 
 using namespace common;
 
@@ -406,37 +407,68 @@ IndexScanOperator *try_to_create_index_scan_operator(FilterStmt *filter_stmt)
 
 RC ExecuteStage::do_select(SQLStageEvent *sql_event)
 {
+  //获取 SelectStmt 对象，表示一个 SELECT 查询语句。
   SelectStmt *select_stmt = (SelectStmt *)(sql_event->stmt());
+  //获取与 SQL 事件相关联的会话事件。
   SessionEvent *session_event = sql_event->session_event();
+  //定义并初始化一个表示执行结果的变量 rc，初始值为成功
   RC rc = RC::SUCCESS;
+  bool is_single_table = true;
+  //检查查询语句涉及的表的数量是否为1，如果不是则输出警告并将 rc 设置为 RC::UNIMPLENMENT，表示不支持多表查询。
+  //改：如果表的数目大于1，那么先执行join操作
+  /*
   if (select_stmt->tables().size() != 1) {
     LOG_WARN("select more than 1 tables is not supported");
     rc = RC::UNIMPLENMENT;
     return rc;
   }
-
+  //尝试根据查询语句的过滤条件创建一个索引扫描操作符，如果成功则使用该操作符，否则创建一个普通的表扫描操作符。
   Operator *scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
   if (nullptr == scan_oper) {
     scan_oper = new TableScanOperator(select_stmt->tables()[0]);
   }
-
+  */
+  //Operator *scan_oper = new TableScanOperator(select_stmt->tables()[0]);
+  Operator *scan_oper = NULL;
+  if (select_stmt->tables().size() > 1){
+    rc=join_tables(select_stmt, &scan_oper);
+    is_single_table = false;
+  }else{
+    scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
+    if (nullptr == scan_oper) {
+      scan_oper = new TableScanOperator(select_stmt->tables()[0]);
+    }
+  }
+  //使用DEFER 宏，确保在函数返回时释放 scan_oper 对象。
   DEFER([&] () {delete scan_oper;});
-
+  //创建谓词操作符 PredicateOperator，并将表扫描操作符设置为其子操作符。
   PredicateOperator pred_oper(select_stmt->filter_stmt());
   pred_oper.add_child(scan_oper);
+  //创建投影操作符 ProjectOperator，将谓词操作符设置为其子操作符，并根据查询语句的字段设置投影。
   ProjectOperator project_oper;
   project_oper.add_child(&pred_oper);
+  //TODO 改：
+  /*
   for (const Field &field : select_stmt->query_fields()) {
     project_oper.add_projection(field.table(), field.meta());
   }
+  */
+  auto &field = select_stmt->query_fields();
+  for (auto it = field.begin(); it != field.end(); it++) {
+    project_oper.add_projection(it->table(), it->meta(), is_single_table);
+  }
+  //打开投影操作符，初始化执行
   rc = project_oper.open();
+  //如果打开操作符失败，则输出警告并返回错误码
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open operator");
     return rc;
   }
-
+  //创建一个 std::stringstream 对象 ss，用于构建查询结果的字符串表示。
   std::stringstream ss;
+  //将投影操作符的元组头信息输出到字符串流中。
   print_tuple_header(ss, project_oper);
+  //迭代执行投影操作符，将查询结果的元组转换为字符串并添加到字符串流中。
   while ((rc = project_oper.next()) == RC::SUCCESS) {
     // get current record
     // write to response
@@ -450,14 +482,16 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
     tuple_to_string(ss, *tuple);
     ss << std::endl;
   }
-
+  //如果迭代操作符时出现错误而不是到达记录末尾，则输出警告并关闭操作符，否则只关闭操作符。
   if (rc != RC::RECORD_EOF) {
     LOG_WARN("something wrong while iterate operator. rc=%s", strrc(rc));
     project_oper.close();
   } else {
     rc = project_oper.close();
   }
+  //将构建的查询结果字符串设置为会话事件的响应内容。
   session_event->set_response(ss.str());
+  //返回执行结果码
   return rc;
 }
 
@@ -797,4 +831,51 @@ RC ExecuteStage::do_update(UpdateStmt *stmt,SessionEvent *session_event){
     session_event->set_response("SUCCESS\n");
   }
   return rc;
+}
+
+//构造一个join算子的对象
+RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper){
+  
+  std::list<Operator *> oper_store;
+  for (int i = 0; i < select_stmt->tables().size(); i++) {
+    Operator *scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
+    if (nullptr == scan_oper) {
+      scan_oper = new TableScanOperator(select_stmt->tables()[i]);
+    }
+    oper_store.push_front(scan_oper);
+  }
+  while (oper_store.size() > 1) {
+    JoinOperator *join_oper = NULL;
+    Operator *left_oper = NULL;
+    Operator *right_oper = NULL;
+    left_oper = oper_store.front();
+    oper_store.pop_front();
+    right_oper = oper_store.front();
+    oper_store.pop_front();
+
+    join_oper = new JoinOperator(left_oper, right_oper);
+    oper_store.push_front(join_oper);
+  }
+  *joined_scan_oper = oper_store.front();
+  return RC::SUCCESS;
+  /*
+  std::vector<Operator *> oper_store;
+  for (int i = 0; i < select_stmt->tables().size(); i++) {
+    Operator *scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
+    if (nullptr == scan_oper) {
+      scan_oper = new TableScanOperator(select_stmt->tables()[i]);
+    }
+    oper_store.push_back(scan_oper);
+  }
+  while (oper_store.size() > 1) {
+    Operator* left_oper = oper_store.back();
+    oper_store.pop_back();
+    Operator* right_oper = oper_store.back();
+    oper_store.pop_back();
+    JoinOperator* join_oper = new JoinOperator(left_oper, right_oper);
+    oper_store.push_back(join_oper);
+  }
+  *joined_scan_oper = oper_store.back();
+  return RC::SUCCESS;
+  */
 }

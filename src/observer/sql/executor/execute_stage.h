@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/parser/parse.h"
 #include "rc.h"
 #include "sql/stmt/update_stmt.h"//add update
+#include "sql/operator/operator.h"
 
 class SQLStageEvent;
 class SessionEvent;
@@ -54,6 +55,7 @@ protected:
 
   RC do_drop_table(SQLStageEvent *sql_event);//add func: drop table
   RC do_update(UpdateStmt *stmt,SessionEvent *session_event);//add func: undate
+  RC join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper);
 
 protected:
 private:

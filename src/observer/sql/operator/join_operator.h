@@ -22,17 +22,21 @@ See the Mulan PSL v2 for more details. */
 class JoinOperator : public Operator
 {
 public:
-  JoinOperator(Operator *left, Operator *right)
-  {}
+  JoinOperator(Operator *left, Operator *right);
 
-  virtual ~JoinOperator() = default;
+  ~JoinOperator();
 
   RC open() override;
   RC next() override;
   RC close() override;
 
+  Tuple * current_tuple() override ;
+
 private:
   Operator *left_ = nullptr;
   Operator *right_ = nullptr;
-  bool round_done_ = true;
+  //bool round_done_ = true;
+  JoinedTuple tuple_;
+
+  bool is_first_ = true;
 };

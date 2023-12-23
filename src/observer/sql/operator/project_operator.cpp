@@ -55,7 +55,10 @@ void ProjectOperator::add_projection(const Table *table, const FieldMeta *field_
   // 对单表来说，展示的(alias) 字段总是字段名称，
   // 对多表查询来说，展示的alias 需要带表名字
   TupleCellSpec *spec = new TupleCellSpec(new FieldExpr(table, field_meta));
-  spec->set_alias(field_meta->name());
+  //TODO 要增添t1.name这种输出格式
+  //spec->set_alias(field_meta->name());
+  auto spec_alias = std::make_shared<std::string>(std::string(table->name()) + '.' + std::string(field_meta->name()));
+  spec->set_alias(spec_alias);
   tuple_.add_cell_spec(spec);
 }
 

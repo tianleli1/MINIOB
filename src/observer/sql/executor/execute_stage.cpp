@@ -837,47 +837,27 @@ RC ExecuteStage::do_update(UpdateStmt *stmt,SessionEvent *session_event){
 
 //构造一个join算子的对象
 RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper){
-  
-  std::list<Operator *> oper_store;
-  for (int i = 0; i < select_stmt->tables().size(); i++) {
-    Operator *scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
-    if (nullptr == scan_oper) {
-      scan_oper = new TableScanOperator(select_stmt->tables()[i]);
+  //创建存储算子的动态数组，用来迭代产生最终的join后的表扫描算子
+  std::vector<Operator *> operators;
+  //便利查询语句中的每个表，如果有索引则利用索引扫描算子，否则使用普通的表扫描算子，将扫描算子添加到动态数组中
+  for (int i=0; i<select_stmt->tables().size();i++){
+    Operator *scan_oper=try_to_create_index_scan_operator(select_stmt->filter_stmt());
+    if (scan_oper==nullptr) {
+      scan_oper=new TableScanOperator(select_stmt->tables()[i]);
     }
-    oper_store.push_front(scan_oper);
+    operators.push_back(scan_oper);
   }
-  while (oper_store.size() > 1) {
-    JoinOperator *join_oper = NULL;
-    Operator *left_oper = NULL;
-    Operator *right_oper = NULL;
-    left_oper = oper_store.front();
-    oper_store.pop_front();
-    right_oper = oper_store.front();
-    oper_store.pop_front();
-
-    join_oper = new JoinOperator(left_oper, right_oper);
-    oper_store.push_front(join_oper);
+  //迭代，将动态数组中的扫描算子两两合并（join）成join操作符。直到最后只剩下一个算子，它就是最终的join后的表的扫描算子
+  while (operators.size() > 1) {
+    Operator* left_oper=operators.back();
+    operators.pop_back();
+    Operator* right_oper=operators.back();
+    operators.pop_back();
+    //生成join算子，详细实现见此类
+    JoinOperator* join_oper=new JoinOperator(left_oper, right_oper);
+    operators.push_back(join_oper);
   }
-  *joined_scan_oper = oper_store.front();
+  //将它保存到传入的指针中
+  *joined_scan_oper=operators.back();
   return RC::SUCCESS;
-  /*
-  std::vector<Operator *> oper_store;
-  for (int i = 0; i < select_stmt->tables().size(); i++) {
-    Operator *scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
-    if (nullptr == scan_oper) {
-      scan_oper = new TableScanOperator(select_stmt->tables()[i]);
-    }
-    oper_store.push_back(scan_oper);
-  }
-  while (oper_store.size() > 1) {
-    Operator* left_oper = oper_store.back();
-    oper_store.pop_back();
-    Operator* right_oper = oper_store.back();
-    oper_store.pop_back();
-    JoinOperator* join_oper = new JoinOperator(left_oper, right_oper);
-    oper_store.push_back(join_oper);
-  }
-  *joined_scan_oper = oper_store.back();
-  return RC::SUCCESS;
-  */
 }

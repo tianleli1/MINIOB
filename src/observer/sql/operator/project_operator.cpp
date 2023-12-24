@@ -56,25 +56,23 @@ void ProjectOperator::add_projection(const Table *table, const FieldMeta *field_
   // 对多表查询来说，展示的alias 需要带表名字
   TupleCellSpec *spec = new TupleCellSpec(new FieldExpr(table, field_meta));
   //TODO 要增添t1.name这种输出格式
-  //spec->set_alias(field_meta->name());
-  auto spec_alias = std::make_shared<std::string>(std::string(table->name()) + '.' + std::string(field_meta->name()));
-  spec->set_alias(spec_alias);
+  spec->set_alias(field_meta->name());
   tuple_.add_cell_spec(spec);
 }
 */
 
-void ProjectOperator::add_projection(const Table *table, const FieldMeta *field_meta, bool is_single_table)
+void ProjectOperator::add_projection(const Table *table, const FieldMeta *field_meta, bool flag_multitables)
 {
   // 对单表来说，展示的(alias) 字段总是字段名称，
   // 对多表查询来说，展示的alias 需要带表名字
   TupleCellSpec *spec = new TupleCellSpec(new FieldExpr(table, field_meta));
-  std::string alias_name;
-  if (!is_single_table) {
-    alias_name = std::string(table->name()) + '.' + std::string(field_meta->name());
+  std::string spec_alias_name;
+  if (flag_multitables) {
+    spec_alias_name=std::string(table->name())+'.'+std::string(field_meta->name());
   } else {
-    alias_name = std::string(field_meta->name());
+    spec_alias_name=std::string(field_meta->name());
   }
-  auto spec_alias = std::make_shared<std::string>(alias_name);
+  auto spec_alias = std::make_shared<std::string>(spec_alias_name);
   spec->set_alias(spec_alias);
   tuple_.add_cell_spec(spec);
 }

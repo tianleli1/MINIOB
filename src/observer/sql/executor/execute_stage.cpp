@@ -47,7 +47,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/clog/clog.h"
 
 #include "sql/operator/update_operator.h"//add UpdateOperator
-#include "sql/operator/join_operator.h"
+#include "sql/operator/join_operator.h"//add JoinOperator for select tables
 
 using namespace common;
 
@@ -413,7 +413,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   SessionEvent *session_event = sql_event->session_event();
   //定义并初始化一个表示执行结果的变量 rc，初始值为成功
   RC rc = RC::SUCCESS;
-  bool is_single_table = true;
+  bool flag_multitables=false;
   //检查查询语句涉及的表的数量是否为1，如果不是则输出警告并将 rc 设置为 RC::UNIMPLENMENT，表示不支持多表查询。
   //改：如果表的数目大于1，那么先执行join操作
   /*
@@ -429,11 +429,13 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   }
   */
   //Operator *scan_oper = new TableScanOperator(select_stmt->tables()[0]);
-  Operator *scan_oper = NULL;
+  Operator *scan_oper=nullptr;
   if (select_stmt->tables().size() > 1){
-    rc=join_tables(select_stmt, &scan_oper);
-    is_single_table = false;
+    //如果表的数目大于1，那么要先执行join操作，生成一个join后的表的扫描算子
+    flag_multitables=true;
+    rc=join_tables(select_stmt,&scan_oper);
   }else{
+    //否则按照原来的方式创建扫描操作符sb
     scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
     if (nullptr == scan_oper) {
       scan_oper = new TableScanOperator(select_stmt->tables()[0]);
@@ -455,7 +457,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   */
   auto &field = select_stmt->query_fields();
   for (auto it = field.begin(); it != field.end(); it++) {
-    project_oper.add_projection(it->table(), it->meta(), is_single_table);
+    project_oper.add_projection(it->table(),it->meta(),flag_multitables);
   }
   //打开投影操作符，初始化执行
   rc = project_oper.open();

@@ -275,7 +275,7 @@ public:
     //再处理原右元组
     new_rowtuple=dynamic_cast<RowTuple *>(right);
     //添加到joinedtuple_
-    joinedtuple_.push_back(new_rowtuple);
+    joinedtuple_.emplace_back(new_rowtuple);
   }
 
   //根据给定的record向joinedtuple_中的各个RowTuple对象设置记录
@@ -284,7 +284,7 @@ public:
     //从头带尾迭代即可
     auto old_record=joinedtuple_.begin();
     auto new_record=records.begin();
-    for (;old_record!=joinedtuple_.end();old_record++,new_record++++){
+    for (;old_record!=joinedtuple_.end();old_record++,++new_record++){
       //直接调用RowTuple的设置记录方法
       (*old_record)->set_record(*new_record);
     }

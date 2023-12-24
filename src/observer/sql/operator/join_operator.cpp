@@ -63,7 +63,7 @@ RC JoinOperator::next()
   if (RC::SUCCESS == rc) {
     assert(RC::SUCCESS == right_->close());
     assert(RC::SUCCESS == right_->open());
-    assert(RC::SUCCESS == right_->next());
+    //assert(RC::SUCCESS == right_->next());
     return next();
   }
   // LOG_ERROR

@@ -24,6 +24,9 @@ RC JoinOperator::next()
     rc = left_->next();
     //以后不会首先取左元组，直到右元组取尽会主动尝试取左元组
     is_first_ = false;
+    if (RC::SUCCESS != rc) {
+      return rc;
+    }
   }
   //然后取右元组
   rc = right_->next();

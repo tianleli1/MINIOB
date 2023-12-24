@@ -269,13 +269,15 @@ public:
     }else{
       //使用dynamic_case将left的Tuple类型指针转换为JoinedTuple类型
       new_joinedtuple=dynamic_cast<JoinedTuple *>(left);
+      if(new_joinedtuple!=nullptr){
+        joinedtuple_.insert(joinedtuple_.end(),new_joinedtuple->joinedtuple_.begin(),new_joinedtuple->joinedtuple_.end());
+      }
       //将joined_tuple中的joinedtuple_的所有元素添加到主joinedtuple_中，从原集合的最后添加，添加整个
-      joinedtuple_.insert(joinedtuple_.end(),new_joinedtuple->joinedtuple_.begin(),new_joinedtuple->joinedtuple_.end());
     }
     //再处理原右元组
     new_rowtuple=dynamic_cast<RowTuple *>(right);
     //添加到joinedtuple_
-    joinedtuple_.emplace_back(new_rowtuple);
+    joinedtuple_.push_back(new_rowtuple);
   }
 
   //根据给定的record向joinedtuple_中的各个RowTuple对象设置记录

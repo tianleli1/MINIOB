@@ -253,7 +253,7 @@ public:
   {
     init(left, right);
   }
-  
+
   //根据左右两个元组的类型，组合成行元组成员joinedtuple_
   void init(Tuple *left, Tuple *right)
   {
@@ -263,7 +263,7 @@ public:
     RowTuple *new_rowtuple=nullptr;
     //先处理原左元组，使用dynamic_case将left的Tuple类型指针转换为RowTuple类型
     new_rowtuple=dynamic_cast<RowTuple *>(left);
-    if(nnew_rowtuple!=nullptr){
+    if(new_rowtuple!=nullptr){
       //添加到joinedtuple_
       joinedtuple_.push_back(new_rowtuple);
     }else{

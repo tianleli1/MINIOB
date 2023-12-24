@@ -68,11 +68,13 @@ void ProjectOperator::add_projection(const Table *table, const FieldMeta *field_
   TupleCellSpec *spec = new TupleCellSpec(new FieldExpr(table, field_meta));
   std::string spec_alias_name;
   if (flag_multitables) {
+    //如果是多个表，那么要拼接表明和列名
     spec_alias_name=std::string(table->name())+'.'+std::string(field_meta->name());
   } else {
+    //否则直接列名
     spec_alias_name=std::string(field_meta->name());
   }
-  spec->set_alias(&spec_alias_name);
+  spec->set_alias(spec_alias_name);
   tuple_.add_cell_spec(spec);
 }
 

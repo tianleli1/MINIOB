@@ -40,9 +40,9 @@ public:
     }
   }
 
-  void set_alias(std::string *alias)
+  void set_alias(std::string str)
   {
-    this->alias_ = alias;
+    alias_ = str;
   }
 
   std::shared_ptr<std::string> get_alias_ptr()
@@ -62,7 +62,8 @@ public:
   }
 
 private:
-  const std::string* alias_ = nullptr;
+  //要更改数据类型，因为std::string类型数据的指针的类型是std::shared_ptr<std::string>
+  std::string alias_ = nullptr;
   Expression *expression_ = nullptr;
 };
 

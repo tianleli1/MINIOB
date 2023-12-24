@@ -242,51 +242,64 @@ private:
   Tuple *tuple_ = nullptr;
 };
 
-
+//创建新类，合并后元组集。直接模仿RowTuple。作用是将两个元组集合并成一个元组集实现join，是select-tables的核心之一
+//辅助JoinOperator类的实现
 class JoinedTuple : public Tuple {
 public:
   JoinedTuple() = default;
+  virtual ~JoinedTuple() = default;
+  
   JoinedTuple(Tuple *left, Tuple *right)
   {
     init(left, right);
   }
+  
+  //根据左右两个元组的类型，组合成行元组成员joinedtuple_
   void init(Tuple *left, Tuple *right)
   {
-    RowTuple *rtup = nullptr;
-    JoinedTuple *jtup = nullptr;
-    if (nullptr != (rtup = dynamic_cast<RowTuple *>(left))) {
-      tuples_.push_back(rtup);
-    } else if (nullptr != (jtup = dynamic_cast<JoinedTuple *>(left))) {
-      auto tups = jtup->get_tuples();
-      tuples_.insert(tuples_.end(), tups.begin(), tups.end());
+    //joinedtuple类型元组
+    JoinedTuple *new_joinedtuple=nullptr;
+    //rowtuple类型元组
+    RowTuple *new_rowtuple=nullptr;
+    //先处理原左元组，使用dynamic_case将left的Tuple类型指针转换为RowTuple类型
+    new_rowtuple=dynamic_cast<RowTuple *>(left);
+    if(nnew_rowtuple!=nullptr){
+      //添加到joinedtuple_
+      joinedtuple_.push_back(new_rowtuple);
+    }else{
+      //使用dynamic_case将left的Tuple类型指针转换为JoinedTuple类型
+      new_joinedtuple=dynamic_cast<JoinedTuple *>(left);
+      //将joined_tuple中的joinedtuple_的所有元素添加到主joinedtuple_中，从原集合的最后添加，添加整个
+      joinedtuple_.insert(joinedtuple_.end(),new_joinedtuple->joinedtuple_.begin(),new_joinedtuple->joinedtuple_.end());
     }
-    assert(nullptr != (rtup = dynamic_cast<RowTuple *>(right)));
-    tuples_.emplace_back(rtup);
-  }
-  virtual ~JoinedTuple() = default;
-  const std::vector<RowTuple *> &get_tuples() const
-  {
-    return tuples_;
+    //再处理原右元组
+    new_rowtuple=dynamic_cast<RowTuple *>(right);
+    //添加到joinedtuple_
+    joinedtuple_.push_back(new_rowtuple);
   }
 
+  //根据给定的record向joinedtuple_中的各个RowTuple对象设置记录
   void set_record(const std::vector<Record *> &records)
   {
-    assert(tuples_.size() == records.size());
-    auto tup_it = tuples_.begin();
-    auto rcd_it = records.begin();
-    for (; tup_it != tuples_.end(); ++tup_it, ++rcd_it++) {
-      (*tup_it)->set_record(*rcd_it);
+    //从头带尾迭代即可
+    auto old_record=joinedtuple_.begin();
+    auto new_record=records.begin();
+    for (;old_record!=tuples_.end();++old_record, ++new_record){
+      //直接调用RowTuple的设置记录方法
+      (*old_record)->set_record(*new_record);
     }
   }
 
+  //获取所有元组的单元格总数，要遍历每个元组并调用同名方法
   virtual int cell_num() const
   {
     int num = 0;
-    for (auto tup : tuples_) {
+    for (auto tup : joinedtuple_) {
       num += tup->cell_num();
     }
     return num;
   }
+  //返回指定索引位置的单元格值
   virtual RC cell_at(int index, TupleCell &cell) const
   {
     Tuple *tuple = nullptr;
@@ -297,6 +310,7 @@ public:
     }
     return tuple->cell_at(real_index, cell);
   }
+  //根据给定的字段查找JoinedTuple中的单元格
   virtual RC find_cell(const Field &field, TupleCell &cell) const
   {
     for (auto tup : tuples_) {
@@ -306,7 +320,7 @@ public:
     }
     return RC::NOTFOUND;
   }
-
+  //返回JoinedTuple中指定索引位置的单元格规格
   virtual RC cell_spec_at(int index, const TupleCellSpec *&spec) const
   {
     Tuple *tuple = nullptr;
@@ -319,6 +333,7 @@ public:
   }
 
 private:
+  //根据给定的索引位置找到对应的Tuple对象和在该Tuple中的真实索引位置
   RC find_tuple_and_index(int index, Tuple *&tuple, int &real_index) const
   {
     if (index < 0 || index >= cell_num()) {
@@ -336,5 +351,6 @@ private:
   }
 
 private:
-  std::vector<RowTuple *> tuples_;
+  //组合后元组集，是一个动态数组，每个元素是join后元组
+  std::vector<RowTuple *> joinedtuple_;
 };

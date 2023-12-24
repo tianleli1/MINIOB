@@ -37,6 +37,5 @@ private:
   Operator *right_ = nullptr;
   //bool round_done_ = true;
   JoinedTuple tuple_;
-
-  bool is_first_ = true;
+  bool is_first_ = true;//辅助笛卡尔积过程，从左元组开始算
 };

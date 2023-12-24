@@ -284,7 +284,7 @@ public:
     //从头带尾迭代即可
     auto old_record=joinedtuple_.begin();
     auto new_record=records.begin();
-    for (;old_record!=tuples_.end();++old_record, ++new_record){
+    for (;old_record!=joinedtuple_.end();++old_record, ++new_record){
       //直接调用RowTuple的设置记录方法
       (*old_record)->set_record(*new_record);
     }
@@ -313,7 +313,7 @@ public:
   //根据给定的字段查找JoinedTuple中的单元格
   virtual RC find_cell(const Field &field, TupleCell &cell) const
   {
-    for (auto tup : tuples_) {
+    for (auto tup : joinedtuple_) {
       if (RC::SUCCESS == tup->find_cell(field, cell)) {
         return RC::SUCCESS;
       }
@@ -340,7 +340,7 @@ private:
       return RC::INVALID_ARGUMENT;
     }
     int idx = 0;
-    for (auto tup : tuples_) {
+    for (auto tup : joinedtuple_) {
       if (idx + tup->cell_num() >= index) {
         tuple = tup;
         real_index = index - idx;

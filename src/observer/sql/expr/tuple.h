@@ -40,16 +40,20 @@ public:
     }
   }
 
-  void set_alias(std::string str)
+  //重载，string类型的指针不是直接*，而是std::shared_ptr<std::string
+  void set_alias(std::shared_ptr<std::string> ptr_str)
   {
-    alias_ = str;
+    this->alias_ = ptr_str;
   }
 
-  std::shared_ptr<std::string> get_alias_ptr()
+  //因为更改了alias_的数据类型，所以要修改原函数
+  void set_alias(const char *alias)
   {
-    return alias_;
+    //this->alias_ = alias;
+    this->alias_ = std::shared_ptr<std::string>(new std::string(alias));
   }
 
+  //因为更改了alias_的数据类型，所以要修改原函数
   const char *alias() const
   {
     //return alias_;
@@ -62,8 +66,8 @@ public:
   }
 
 private:
-  //要更改数据类型，因为std::string类型数据的指针的类型是std::shared_ptr<std::string>
-  std::string alias_ = nullptr;
+  //要更改数据类型，因为设置列名时考虑多表，最终得到的数据类型是std::string。std::string类型数据的指针的类型是std::shared_ptr<std::string>
+  std::shared_ptr<std::string> alias_ = nullptr;
   Expression *expression_ = nullptr;
 };
 

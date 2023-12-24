@@ -74,7 +74,8 @@ void ProjectOperator::add_projection(const Table *table, const FieldMeta *field_
     //否则直接列名
     spec_alias_name=std::string(field_meta->name());
   }
-  spec->set_alias(spec_alias_name);
+  //想要得到string类型的指针，不能直接&，要利用make_shared得到std::shared_ptr<std::string>类型的指针
+  spec->set_alias(std::make_shared<std::string>(spec_alias_name));
   tuple_.add_cell_spec(spec);
 }
 

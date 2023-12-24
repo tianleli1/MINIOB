@@ -451,7 +451,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   project_oper.add_child(&pred_oper);
   //TODO 设置投影 改：
   for (const Field &field : select_stmt->query_fields()) {
-    project_oper.add_projection(field->table(),field->meta(),flag_multitables);
+    project_oper.add_projection(field.table(),field.meta(),flag_multitables);
   }
   //打开投影操作符，初始化执行
   rc = project_oper.open();

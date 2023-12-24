@@ -40,15 +40,9 @@ public:
     }
   }
 
-  void set_alias(const char *alias)
+  void set_alias(std::string *alias)
   {
-    //this->alias_ = alias;
-    alias_ = std::shared_ptr<std::string>(new std::string(alias));
-  }
-
-  void set_alias(std::shared_ptr<std::string> ptr)
-  {
-    alias_ = ptr;
+    this->alias_ = alias;
   }
 
   std::shared_ptr<std::string> get_alias_ptr()
@@ -68,10 +62,8 @@ public:
   }
 
 private:
-  //const char *alias_ = nullptr;
+  const std::string* alias_ = nullptr;
   Expression *expression_ = nullptr;
-
-  std::shared_ptr<std::string> alias_ = nullptr;
 };
 
 class Tuple

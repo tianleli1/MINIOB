@@ -72,8 +72,7 @@ void ProjectOperator::add_projection(const Table *table, const FieldMeta *field_
   } else {
     spec_alias_name=std::string(field_meta->name());
   }
-  auto spec_alias = std::make_shared<std::string>(spec_alias_name);
-  spec->set_alias(spec_alias);
+  spec->set_alias(&spec_alias_name);
   tuple_.add_cell_spec(spec);
 }
 

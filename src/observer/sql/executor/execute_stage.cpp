@@ -449,14 +449,8 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   //创建投影操作符 ProjectOperator，将谓词操作符设置为其子操作符，并根据查询语句的字段设置投影。
   ProjectOperator project_oper;
   project_oper.add_child(&pred_oper);
-  //TODO 改：
-  /*
+  //TODO 设置投影 改：
   for (const Field &field : select_stmt->query_fields()) {
-    project_oper.add_projection(field.table(), field.meta());
-  }
-  */
-  auto &field = select_stmt->query_fields();
-  for (auto it = field.begin(); it != field.end(); it++) {
     project_oper.add_projection(it->table(),it->meta(),flag_multitables);
   }
   //打开投影操作符，初始化执行

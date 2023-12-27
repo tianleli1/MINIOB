@@ -103,6 +103,8 @@ ParserContext *get_context(yyscan_t scanner)
         LE
         GE
         NE
+		INNER
+		JOIN
 
 %union {
   struct _Attr *attr;
@@ -415,6 +417,15 @@ rel_list:
     | COMMA ID rel_list {	
 				selects_append_relation(&CONTEXT->ssql->sstr.selection, $2);
 		  }
+	| INNER JOIN ID inner_join_conditions rel_list{
+				selects_append_relation(&CONTEXT->ssql->sstr.selection, $3);
+		}
+    ;
+	
+inner_join_conditions:
+	/* empty */
+	| ON condition condition_list{
+		}
     ;
 where:
     /* empty */ 

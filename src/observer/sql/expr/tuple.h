@@ -82,6 +82,10 @@ public:
   virtual RC  find_cell(const Field &field, TupleCell &cell) const = 0;
 
   virtual RC  cell_spec_at(int index, const TupleCellSpec *&spec) const = 0;
+
+  virtual void get_record(CompoundRecord &record) const = 0;
+  virtual void set_record(CompoundRecord &record) = 0;
+  virtual void set_right_record(CompoundRecord &record) = 0;
 };
 
 class RowTuple : public Tuple
@@ -95,7 +99,18 @@ public:
     }
     speces_.clear();
   }
-  
+
+  void set_record(CompoundRecord &record) override
+  {
+    this->record_ = record.front();
+    record.erase(record.begin());
+  }
+
+  void set_right_record(CompoundRecord &record) override
+  {
+    set_record(record);
+  }
+
   void set_record(Record *record)
   {
     this->record_ = record;
@@ -168,6 +183,12 @@ public:
   {
     return *record_;
   }
+
+  void get_record(CompoundRecord &record) const override
+  {
+    record.emplace_back(record_);
+  }
+
 private:
   Record *record_ = nullptr;
   const Table *table_ = nullptr;
@@ -237,6 +258,22 @@ public:
     spec = speces_[index];
     return RC::SUCCESS;
   }
+
+  void get_record(CompoundRecord &record) const override
+  {
+    tuple_->get_record(record);
+  }
+  
+  void set_record(CompoundRecord &record) override
+  {
+    tuple_->set_record(record);
+  }
+
+  void set_right_record(CompoundRecord &record) override
+  {
+    tuple_->set_right_record(record);
+  }
+
 private:
   std::vector<TupleCellSpec *> speces_;
   Tuple *tuple_ = nullptr;
@@ -249,110 +286,138 @@ public:
   JoinedTuple() = default;
   virtual ~JoinedTuple() = default;
   
-  JoinedTuple(Tuple *left, Tuple *right)
-  {
-    init(left, right);
-  }
+  // JoinedTuple(Tuple *left, Tuple *right)
+  // {
+  //   init(left, right);
+  // }
+  JoinedTuple(Tuple *left, Tuple *right) : left_tup_(left), right_tup_(right)
+  {}
 
   //根据左右两个元组的类型，组合成行元组成员joinedtuple_
+  // void init(Tuple *left, Tuple *right)
+  // {
+  //   //joinedtuple类型元组
+  //   JoinedTuple *new_joinedtuple=nullptr;
+  //   //rowtuple类型元组
+  //   RowTuple *new_rowtuple=nullptr;
+  //   //先处理原左元组，使用dynamic_case将left的Tuple类型指针转换为RowTuple类型
+  //   new_rowtuple=dynamic_cast<RowTuple *>(left);
+  //   if(new_rowtuple!=nullptr){
+  //     //添加到joinedtuple_
+  //     joinedtuple_.push_back(new_rowtuple);
+  //   }else{
+  //     //使用dynamic_case将left的Tuple类型指针转换为JoinedTuple类型
+  //     new_joinedtuple=dynamic_cast<JoinedTuple *>(left);
+  //     if(new_joinedtuple!=nullptr){
+  //       joinedtuple_.insert(joinedtuple_.end(),new_joinedtuple->joinedtuple_.begin(),new_joinedtuple->joinedtuple_.end());
+  //     }
+  //     //将joined_tuple中的joinedtuple_的所有元素添加到主joinedtuple_中，从原集合的最后添加，添加整个
+  //   }
+  //   //再处理原右元组
+  //   new_rowtuple=dynamic_cast<RowTuple *>(right);
+  //   //添加到joinedtuple_
+  //   joinedtuple_.push_back(new_rowtuple);
+  // }
   void init(Tuple *left, Tuple *right)
   {
-    //joinedtuple类型元组
-    JoinedTuple *new_joinedtuple=nullptr;
-    //rowtuple类型元组
-    RowTuple *new_rowtuple=nullptr;
-    //先处理原左元组，使用dynamic_case将left的Tuple类型指针转换为RowTuple类型
-    new_rowtuple=dynamic_cast<RowTuple *>(left);
-    if(new_rowtuple!=nullptr){
-      //添加到joinedtuple_
-      joinedtuple_.push_back(new_rowtuple);
-    }else{
-      //使用dynamic_case将left的Tuple类型指针转换为JoinedTuple类型
-      new_joinedtuple=dynamic_cast<JoinedTuple *>(left);
-      if(new_joinedtuple!=nullptr){
-        joinedtuple_.insert(joinedtuple_.end(),new_joinedtuple->joinedtuple_.begin(),new_joinedtuple->joinedtuple_.end());
-      }
-      //将joined_tuple中的joinedtuple_的所有元素添加到主joinedtuple_中，从原集合的最后添加，添加整个
-    }
-    //再处理原右元组
-    new_rowtuple=dynamic_cast<RowTuple *>(right);
-    //添加到joinedtuple_
-    joinedtuple_.push_back(new_rowtuple);
+    left_tup_ = left;
+    right_tup_ = right;
+  }
+
+  void set_right_record(CompoundRecord &record) override
+  {
+    right_tup_->set_right_record(record);
   }
 
   //根据给定的record向joinedtuple_中的各个RowTuple对象设置记录
-  void set_record(const std::vector<Record *> &records)
+  // void set_record(const std::vector<Record *> &records)
+  // {
+  //   //从头带尾迭代即可
+  //   auto old_record=joinedtuple_.begin();
+  //   auto new_record=records.begin();
+  //   for (;old_record!=joinedtuple_.end();old_record++,new_record++++){
+  //     //直接调用RowTuple的设置记录方法
+  //     (*old_record)->set_record(*new_record);
+  //   }
+  // }
+
+  void set_record(CompoundRecord &record) override
   {
-    //从头带尾迭代即可
-    auto old_record=joinedtuple_.begin();
-    auto new_record=records.begin();
-    for (;old_record!=joinedtuple_.end();old_record++,new_record++++){
-      //直接调用RowTuple的设置记录方法
-      (*old_record)->set_record(*new_record);
-    }
+    left_tup_->set_record(record);
+    right_tup_->set_record(record);
   }
 
   //获取所有元组的单元格总数，要遍历每个元组并调用同名方法
   virtual int cell_num() const
   {
-    int num = 0;
-    for (auto tup : joinedtuple_) {
-      num += tup->cell_num();
-    }
-    return num;
+    // int num = 0;
+    // for (auto tup : joinedtuple_) {
+    //   num += tup->cell_num();
+    // }
+    // return num;
+    return left_tup_->cell_num() + right_tup_->cell_num();
   }
   //返回指定索引位置的单元格值
   virtual RC cell_at(int index, TupleCell &cell) const
   {
-    Tuple *tuple = nullptr;
-    int real_index = -1;
-    RC rc = find_tuple_and_index(index, tuple, real_index);
-    if (RC::SUCCESS != rc) {
-      return rc;
+    // Tuple *tuple = nullptr;
+    // int real_index = -1;
+    // RC rc = find_tuple_and_index(index, tuple, real_index);
+    // if (RC::SUCCESS != rc) {
+    //   return rc;
+    // }
+    // return tuple->cell_at(real_index, cell);
+    if (index < 0 || index >= cell_num()) {
+      return RC::INVALID_ARGUMENT;
     }
-    return tuple->cell_at(real_index, cell);
+    int num = left_tup_->cell_num();
+    if (index < num) {
+      return left_tup_->cell_at(index, cell);
+    }
+    return right_tup_->cell_at(index - num, cell);
   }
   //根据给定的字段查找JoinedTuple中的单元格
   virtual RC find_cell(const Field &field, TupleCell &cell) const
   {
-    for (auto tup : joinedtuple_) {
-      if (RC::SUCCESS == tup->find_cell(field, cell)) {
-        return RC::SUCCESS;
-      }
+    // for (auto tup : joinedtuple_) {
+    //   if (RC::SUCCESS == tup->find_cell(field, cell)) {
+    //     return RC::SUCCESS;
+    //   }
+    // }
+    // return RC::NOTFOUND;
+    if (RC::SUCCESS != left_tup_->find_cell(field, cell)) {
+      return right_tup_->find_cell(field, cell);
     }
-    return RC::NOTFOUND;
+    return RC::SUCCESS;
   }
   //返回JoinedTuple中指定索引位置的单元格规格
   virtual RC cell_spec_at(int index, const TupleCellSpec *&spec) const
   {
-    Tuple *tuple = nullptr;
-    int real_index = -1;
-    RC rc = find_tuple_and_index(index, tuple, real_index);
-    if (RC::SUCCESS != rc) {
-      return rc;
-    }
-    return tuple->cell_spec_at(real_index, spec);
-  }
-
-private:
-  //根据给定的索引位置找到对应的Tuple对象和在该Tuple中的真实索引位置
-  RC find_tuple_and_index(int index, Tuple *&tuple, int &real_index) const
-  {
+    // Tuple *tuple = nullptr;
+    // int real_index = -1;
+    // RC rc = find_tuple_and_index(index, tuple, real_index);
+    // if (RC::SUCCESS != rc) {
+    //   return rc;
+    // }
+    // return tuple->cell_spec_at(real_index, spec);
     if (index < 0 || index >= cell_num()) {
       return RC::INVALID_ARGUMENT;
     }
-    int idx = 0;
-    for (auto tup : joinedtuple_) {
-      if (idx + tup->cell_num() >= index) {
-        tuple = tup;
-        real_index = index - idx;
-      }
-      idx += tup->cell_num();
+    int num = left_tup_->cell_num();
+    if (index < num) {
+      return left_tup_->cell_spec_at(index, spec);
     }
-    return RC::SUCCESS;
+    return right_tup_->cell_spec_at(index - num, spec);
+  }
+  void get_record(CompoundRecord &record) const override
+  {
+    left_tup_->get_record(record);
+    right_tup_->get_record(record);
   }
 
 private:
   //组合后元组集，是一个动态数组，每个元素是join后元组
   std::vector<RowTuple *> joinedtuple_;
+  Tuple *left_tup_;
+  Tuple *right_tup_;
 };

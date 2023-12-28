@@ -49,6 +49,8 @@ QUOTE            [\'\"]
 [Tt][Aa][Bb][Ll][Ee]                                 RETURN_TOKEN(TABLE);
 [Tt][Aa][Bb][Ll][Ee][Ss]                             RETURN_TOKEN(TABLES);
 [Ii][Nn][Dd][Ee][Xx]                                 RETURN_TOKEN(INDEX);
+[Ii][Nn][Nn][Ee][Rr]                                 RETURN_TOKEN(INNER);
+[Jj][Oo][Ii][Nn]                                     RETURN_TOKEN(JOIN);
 [Oo][Nn]                                             RETURN_TOKEN(ON);
 [Ss][Hh][Oo][Ww]                                     RETURN_TOKEN(SHOW);
 [Ss][Yy][Nn][Cc]                                     RETURN_TOKEN(SYNC);
@@ -72,8 +74,6 @@ QUOTE            [\'\"]
 [Dd][Aa][Tt][Aa]                                     RETURN_TOKEN(DATA);
 [Ii][Nn][Ff][Ii][Ll][Ee]                             RETURN_TOKEN(INFILE);
 [Dd][Aa][Tt][Ee]                                     RETURN_TOKEN(DATE_T);// should before ID
-[Ii][Nn][Nn][Ee][Rr]                                 RETURN_TOKEN(INNER);
-[Jj][Oo][Ii][Nn]                                     RETURN_TOKEN(JOIN);
 {ID}                                                 yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 {QUOTE}([0-9]{4})\-([0-9]|[0-9]{2})\-([0-9]|[0-9]{2}){QUOTE}     yylval->string=strdup(yytext); RETURN_TOKEN(DATE_S); //add date
 "("                                                  RETURN_TOKEN(LBRACE);

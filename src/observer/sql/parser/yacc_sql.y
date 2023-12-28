@@ -67,6 +67,8 @@ ParserContext *get_context(yyscan_t scanner)
         TABLE
         TABLES
         INDEX
+		INNER
+		JOIN
         SELECT
         DESC
         SHOW
@@ -103,8 +105,6 @@ ParserContext *get_context(yyscan_t scanner)
         LE
         GE
         NE
-		INNER
-		JOIN
 
 %union {
   struct _Attr *attr;

@@ -893,6 +893,9 @@ RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_ope
 */
 
 RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper){
+  const auto &tables = select_stmt->tables();
+  FilterStmt *filter_stmt = select_stmt->filter_stmt();
+  auto table_filters_ht = split_filters(tables, filter_stmt);
   //创建存储算子的动态数组，用来迭代产生最终的join后的表扫描算子
   std::vector<Operator *> operators;
   //便利查询语句中的每个表，如果有索引则利用索引扫描算子，否则使用普通的表扫描算子，将扫描算子添加到动态数组中

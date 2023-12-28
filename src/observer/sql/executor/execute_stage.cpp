@@ -920,6 +920,6 @@ RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_ope
     operators.push_front(join_oper);
   }
   //将它保存到传入的指针中
-  *joined_scan_oper=operators.back();
+  *joined_scan_oper=operators.front();
   return RC::SUCCESS;
 }

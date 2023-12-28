@@ -53,6 +53,12 @@ public:
     this->alias_ = std::shared_ptr<std::string>(new std::string(alias));
   }
 
+  std::shared_ptr<std::string> get_alias_ptr()
+  {
+    return alias_;
+  }
+
+
   //因为更改了alias_的数据类型，所以要修改原函数
   const char *alias() const
   {

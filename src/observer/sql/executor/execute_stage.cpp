@@ -478,7 +478,11 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
     delete_opers.push_back(scan_oper);
   }
   //使用DEFER 宏，确保在函数返回时释放 scan_oper 对象。
-  DEFER([&] () {delete scan_oper;});
+  DEFER([&]() {
+    for (auto oper : delete_opers) {
+      delete oper;
+    }
+  });
   //创建谓词操作符 PredicateOperator，并将表扫描操作符设置为其子操作符。
   PredicateOperator pred_oper(select_stmt->filter_stmt());
   pred_oper.add_child(scan_oper);

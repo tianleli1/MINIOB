@@ -6,7 +6,14 @@ JoinOperator::JoinOperator(Operator *left, Operator *right) : left_(left), right
   {
     rht_it_ = rht_.end();
   }
-JoinOperator::~JoinOperator(){}
+JoinOperator::~JoinOperator()
+{
+  for (auto &cpd_rcd : rht_) {
+      for (auto rcd : cpd_rcd) {
+        delete rcd;
+      }
+    }
+}
 
 RC JoinOperator::open()
 {
@@ -52,7 +59,8 @@ RC JoinOperator::next()
     rc = fetch_right_table();
   }
   if (rht_.end() != rht_it_) {
-    tuple_.set_right_record(*rht_it_);
+    CompoundRecord temp(*rht_it_);
+    tuple_.set_right_record(temp);
     rht_it_++;
     return RC::SUCCESS;
   }

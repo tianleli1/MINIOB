@@ -495,7 +495,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   // }
   auto &field = select_stmt->query_fields();
   for (auto it = field.begin(); it != field.end(); it++) {
-    project_oper.add_projection(it->table(), it->meta(), is_single_table);
+    project_oper.add_projection(it->table(), it->meta(),flag_multitables);
   }
   //打开投影操作符，初始化执行
   rc = project_oper.open();

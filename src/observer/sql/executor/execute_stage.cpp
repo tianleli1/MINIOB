@@ -863,8 +863,8 @@ RC ExecuteStage::do_update(UpdateStmt *stmt,SessionEvent *session_event){
   return rc;
 }
 
-//构造一个join算子的对象
 /*
+//构造一个join算子的对象
 RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper){
   //创建存储算子的动态数组，用来迭代产生最终的join后的表扫描算子
   std::vector<Operator *> operators;
@@ -891,32 +891,17 @@ RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_ope
   return RC::SUCCESS;
 }
 */
-RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper, std::vector<Operator *> &delete_opers){
+
+RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper){
   //创建存储算子的动态数组，用来迭代产生最终的join后的表扫描算子
   std::vector<Operator *> operators;
-
-  const auto &tables = select_stmt->tables();
-  FilterStmt *filter_stmt = select_stmt->filter_stmt();
-  auto table_filters_ht = split_filters(tables, filter_stmt);
-
-  /*
   //便利查询语句中的每个表，如果有索引则利用索引扫描算子，否则使用普通的表扫描算子，将扫描算子添加到动态数组中
-  for (size_t i=0; i<select_stmt->tables().size();i++){
-    Operator *scan_oper=try_to_create_index_scan_operator(select_stmt->filter_stmt());
+  for (std::vector<Table *>::size_type i = 0; i < tables.size(); i++){
+    Operator *scan_oper=try_to_create_index_scan_operator(*table_filters_ht[tables[i]]);
     if (scan_oper==nullptr) {
-      scan_oper=new TableScanOperator(select_stmt->tables()[i]);
+      scan_oper=new TableScanOperator(tables[i]);
     }
     operators.push_back(scan_oper);
-  }
-  */
-  for (std::vector<Table *>::size_type i = 0; i < tables.size(); i++) {
-      Operator *scan_oper = try_to_create_index_scan_operator(*table_filters_ht[tables[i]]);
-      if (nullptr == scan_oper) {
-        scan_oper = new TableScanOperator(tables[i]);
-      }
-      operators.push_back(scan_oper);
-      delete_opers.push_back(scan_oper);
-    }
   }
   //迭代，将动态数组中的扫描算子两两合并（join）成join操作符。直到最后只剩下一个算子，它就是最终的join后的表的扫描算子
   while (operators.size() > 1) {

@@ -18,6 +18,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/operator.h"
 #include "rc.h"
 
+#include <vector>
+
 // TODO fixme
 class JoinOperator : public Operator
 {
@@ -33,9 +35,14 @@ public:
   Tuple * current_tuple() override ;
 
 private:
+  RC fetch_right_table();
+
   Operator *left_ = nullptr;
   Operator *right_ = nullptr;
   //bool round_done_ = true;
   JoinedTuple tuple_;
   bool is_first_ = true;//辅助笛卡尔积过程，从左元组开始算
+
+  std::vector<CompoundRecord>::iterator rht_it_;
+  std::vector<CompoundRecord> rht_;  // right hand table
 };

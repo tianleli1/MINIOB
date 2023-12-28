@@ -263,7 +263,7 @@ public:
   {
     tuple_->get_record(record);
   }
-  
+
   void set_record(CompoundRecord &record) override
   {
     tuple_->set_record(record);
@@ -348,7 +348,7 @@ public:
   }
 
   //获取所有元组的单元格总数，要遍历每个元组并调用同名方法
-  virtual int cell_num() const
+  int cell_num() const override
   {
     // int num = 0;
     // for (auto tup : joinedtuple_) {
@@ -358,7 +358,7 @@ public:
     return left_tup_->cell_num() + right_tup_->cell_num();
   }
   //返回指定索引位置的单元格值
-  virtual RC cell_at(int index, TupleCell &cell) const
+  RC cell_at(int index, TupleCell &cell) const override
   {
     // Tuple *tuple = nullptr;
     // int real_index = -1;
@@ -377,7 +377,7 @@ public:
     return right_tup_->cell_at(index - num, cell);
   }
   //根据给定的字段查找JoinedTuple中的单元格
-  virtual RC find_cell(const Field &field, TupleCell &cell) const
+  RC find_cell(const Field &field, TupleCell &cell) const override
   {
     // for (auto tup : joinedtuple_) {
     //   if (RC::SUCCESS == tup->find_cell(field, cell)) {
@@ -391,7 +391,7 @@ public:
     return RC::SUCCESS;
   }
   //返回JoinedTuple中指定索引位置的单元格规格
-  virtual RC cell_spec_at(int index, const TupleCellSpec *&spec) const
+  RC cell_spec_at(int index, const TupleCellSpec *&spec) const override
   {
     // Tuple *tuple = nullptr;
     // int real_index = -1;

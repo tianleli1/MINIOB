@@ -448,6 +448,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   //定义并初始化一个表示执行结果的变量 rc，初始值为成功
   RC rc = RC::SUCCESS;
   bool flag_multitables=false;
+  std::vector<Operator *> delete_opers;
   //检查查询语句涉及的表的数量是否为1，如果不是则输出警告并将 rc 设置为 RC::UNIMPLENMENT，表示不支持多表查询。
   //改：如果表的数目大于1，那么先执行join操作
   /*
@@ -467,13 +468,14 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   if (select_stmt->tables().size() > 1){
     //如果表的数目大于1，那么要先执行join操作，生成一个join后的表的扫描算子
     flag_multitables=true;
-    rc=join_tables(select_stmt,&scan_oper);
+    rc=join_tables(select_stmt,&scan_oper, delete_opers);
   }else{
     //否则按照原来的方式创建扫描操作符sb
     scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt()->filter_units());
     if (nullptr == scan_oper) {
       scan_oper = new TableScanOperator(select_stmt->tables()[0]);
     }
+    delete_opers.push_back(scan_oper);
   }
   //使用DEFER 宏，确保在函数返回时释放 scan_oper 对象。
   DEFER([&] () {delete scan_oper;});
@@ -892,7 +894,7 @@ RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_ope
 }
 */
 
-RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper){
+RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper, std::vector<Operator *> &delete_opers){
   const auto &tables = select_stmt->tables();
   FilterStmt *filter_stmt = select_stmt->filter_stmt();
   auto table_filters_ht = split_filters(tables, filter_stmt);
@@ -904,6 +906,7 @@ RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_ope
     if (scan_oper==nullptr) {
       scan_oper=new TableScanOperator(tables[i]);
     }
+    delete_opers.push_back(scan_oper);
     operators.push_back(scan_oper);
   }
   //迭代，将动态数组中的扫描算子两两合并（join）成join操作符。直到最后只剩下一个算子，它就是最终的join后的表的扫描算子

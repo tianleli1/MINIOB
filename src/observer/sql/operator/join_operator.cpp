@@ -57,6 +57,9 @@ RC JoinOperator::next()
     //以后不会首先取左元组，直到右元组取尽会主动尝试取左元组
     is_first_ = false;
     rc = fetch_right_table();
+    if (RC::SUCCESS != rc) {
+      return rc;
+    }
   }
   if (rht_.end() != rht_it_) {
     CompoundRecord temp(*rht_it_);

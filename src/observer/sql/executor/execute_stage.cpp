@@ -840,7 +840,7 @@ RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_ope
   //创建存储算子的动态数组，用来迭代产生最终的join后的表扫描算子
   std::vector<Operator *> operators;
   //便利查询语句中的每个表，如果有索引则利用索引扫描算子，否则使用普通的表扫描算子，将扫描算子添加到动态数组中
-  for (size_t i=0; i<select_stmt->tables().size();i++){
+  for (int i=0; i<select_stmt->tables().size();i++){
     Operator *scan_oper=try_to_create_index_scan_operator(select_stmt->filter_stmt());
     if (scan_oper==nullptr) {
       scan_oper=new TableScanOperator(select_stmt->tables()[i]);

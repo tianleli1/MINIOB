@@ -57,8 +57,6 @@ See the Mulan PSL v2 for more details. */
 
 using namespace common;
 
-typedef std::vector<FilterUnit *> FilterUnits;
-
 //RC create_selection_executor(
 //   Trx *trx, const Selects &selects, const char *db, const char *table_name, SelectExeNode &select_node);
 
@@ -290,9 +288,9 @@ void tuple_to_string(std::ostream &os, const Tuple &tuple)
   }
 }
 
-IndexScanOperator *try_to_create_index_scan_operator(const FilterUnits &filter_units)
+IndexScanOperator *try_to_create_index_scan_operator(FilterStmt *filter_stmt)
 {
-  //const std::vector<FilterUnit *> &filter_units = filter_stmt->filter_units();
+  const std::vector<FilterUnit *> &filter_units = filter_stmt->filter_units();
   if (filter_units.empty() ) {
     return nullptr;
   }
@@ -413,32 +411,6 @@ IndexScanOperator *try_to_create_index_scan_operator(const FilterUnits &filter_u
   return oper;
 }
 
-std::unordered_map<Table *, std::unique_ptr<FilterUnits>> split_filters(
-    const std::vector<Table *> &tables, FilterStmt *filter_stmt)
-{
-  std::unordered_map<Table *, std::unique_ptr<FilterUnits>> res;
-  for (auto table : tables) {
-    res[table] = std::make_unique<FilterUnits>();
-  }
-  for (auto filter : filter_stmt->filter_units()) {
-    Expression *left = filter->left();
-    Expression *right = filter->right();
-    if (ExprType::FIELD == left->type() && ExprType::VALUE == right->type()) {
-    } else if (ExprType::FIELD == right->type() && ExprType::VALUE == left->type()) {
-      std::swap(left, right);
-    } else {
-      continue;
-    }
-    // TODO: NEED TO CONSIDER SUB_QUERY
-    // only support FILED comp VALUE or VALUE comp FILED now
-    assert(ExprType::FIELD == left->type() && ExprType::VALUE == right->type());
-    auto &left_filed_expr = *static_cast<FieldExpr *>(left);
-    const Field &field = left_filed_expr.field();
-    res[const_cast<Table *>(field.table())]->emplace_back(filter);
-  }
-  return res;
-}
-
 RC ExecuteStage::do_select(SQLStageEvent *sql_event)
 {
   //获取 SelectStmt 对象，表示一个 SELECT 查询语句。
@@ -470,7 +442,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
     rc=join_tables(select_stmt,&scan_oper);
   }else{
     //否则按照原来的方式创建扫描操作符sb
-    scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt()->filter_units());
+    scan_oper = try_to_create_index_scan_operator(select_stmt->filter_stmt());
     if (nullptr == scan_oper) {
       scan_oper = new TableScanOperator(select_stmt->tables()[0]);
     }
@@ -863,7 +835,6 @@ RC ExecuteStage::do_update(UpdateStmt *stmt,SessionEvent *session_event){
   return rc;
 }
 
-/*
 //构造一个join算子的对象
 RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper){
   //创建存储算子的动态数组，用来迭代产生最终的join后的表扫描算子
@@ -873,36 +844,6 @@ RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_ope
     Operator *scan_oper=try_to_create_index_scan_operator(select_stmt->filter_stmt());
     if (scan_oper==nullptr) {
       scan_oper=new TableScanOperator(select_stmt->tables()[i]);
-    }
-    operators.push_back(scan_oper);
-  }
-  //迭代，将动态数组中的扫描算子两两合并（join）成join操作符。直到最后只剩下一个算子，它就是最终的join后的表的扫描算子
-  while (operators.size() > 1) {
-    Operator* left_oper=operators.back();
-    operators.pop_back();
-    Operator* right_oper=operators.back();
-    operators.pop_back();
-    //生成join算子，详细实现见此类
-    JoinOperator* join_oper=new JoinOperator(left_oper, right_oper);
-    operators.push_back(join_oper);
-  }
-  //将它保存到传入的指针中
-  *joined_scan_oper=operators.back();
-  return RC::SUCCESS;
-}
-*/
-
-RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper){
-  const auto &tables = select_stmt->tables();
-  FilterStmt *filter_stmt = select_stmt->filter_stmt();
-  auto table_filters_ht = split_filters(tables, filter_stmt);
-  //创建存储算子的动态数组，用来迭代产生最终的join后的表扫描算子
-  std::vector<Operator *> operators;
-  //便利查询语句中的每个表，如果有索引则利用索引扫描算子，否则使用普通的表扫描算子，将扫描算子添加到动态数组中
-  for (std::vector<Table *>::size_type i = 0; i < tables.size(); i++){
-    Operator *scan_oper=try_to_create_index_scan_operator(*table_filters_ht[tables[i]]);
-    if (scan_oper==nullptr) {
-      scan_oper=new TableScanOperator(tables[i]);
     }
     operators.push_back(scan_oper);
   }

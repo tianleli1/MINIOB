@@ -478,11 +478,7 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
     delete_opers.push_back(scan_oper);
   }
   //使用DEFER 宏，确保在函数返回时释放 scan_oper 对象。
-  DEFER([&]() {
-    for (auto oper : delete_opers) {
-      delete oper;
-    }
-  });
+  DEFER([&] () {delete scan_oper;});
   //创建谓词操作符 PredicateOperator，并将表扫描操作符设置为其子操作符。
   PredicateOperator pred_oper(select_stmt->filter_stmt());
   pred_oper.add_child(scan_oper);
@@ -490,12 +486,8 @@ RC ExecuteStage::do_select(SQLStageEvent *sql_event)
   ProjectOperator project_oper;
   project_oper.add_child(&pred_oper);
   //TODO 设置投影 改：
-  // for (const Field &field : select_stmt->query_fields()) {
-  //   project_oper.add_projection(field.table(),field.meta(),flag_multitables);
-  // }
-  auto &field = select_stmt->query_fields();
-  for (auto it = field.begin(); it != field.end(); it++) {
-    project_oper.add_projection(it->table(), it->meta(),flag_multitables);
+  for (const Field &field : select_stmt->query_fields()) {
+    project_oper.add_projection(field.table(),field.meta(),flag_multitables);
   }
   //打开投影操作符，初始化执行
   rc = project_oper.open();

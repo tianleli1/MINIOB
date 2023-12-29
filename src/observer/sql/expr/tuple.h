@@ -423,7 +423,7 @@ public:
 
 private:
   //组合后元组集，是一个动态数组，每个元素是join后元组
-  //std::vector<RowTuple *> joinedtuple_;
+  std::vector<RowTuple *> joinedtuple_;
   Tuple *left_tup_;
   Tuple *right_tup_;
 };

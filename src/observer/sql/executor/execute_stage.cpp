@@ -899,27 +899,27 @@ RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_ope
   FilterStmt *filter_stmt = select_stmt->filter_stmt();
   auto table_filters_ht = split_filters(tables, filter_stmt);
   //创建存储算子的动态数组，用来迭代产生最终的join后的表扫描算子
-  std::list<Operator *> operators;
+  std::vector<Operator *> operators;
   //便利查询语句中的每个表，如果有索引则利用索引扫描算子，否则使用普通的表扫描算子，将扫描算子添加到动态数组中
   for (std::vector<Table *>::size_type i = 0; i < tables.size(); i++){
     Operator *scan_oper=try_to_create_index_scan_operator(*table_filters_ht[tables[i]]);
     if (scan_oper==nullptr) {
       scan_oper=new TableScanOperator(tables[i]);
     }
-    operators.push_front(scan_oper);
     delete_opers.push_back(scan_oper);
+    operators.push_back(scan_oper);
   }
   //迭代，将动态数组中的扫描算子两两合并（join）成join操作符。直到最后只剩下一个算子，它就是最终的join后的表的扫描算子
   while (operators.size() > 1) {
-    Operator* left_oper=operators.front();
-    operators.pop_front();
-    Operator* right_oper=operators.front();
-    operators.pop_front();
+    Operator* left_oper=operators.back();
+    operators.pop_back();
+    Operator* right_oper=operators.back();
+    operators.pop_back();
     //生成join算子，详细实现见此类
     JoinOperator* join_oper=new JoinOperator(left_oper, right_oper);
-    operators.push_front(join_oper);
+    operators.push_back(join_oper);
   }
   //将它保存到传入的指针中
-  *joined_scan_oper=operators.front();
+  *joined_scan_oper=operators.back();
   return RC::SUCCESS;
 }

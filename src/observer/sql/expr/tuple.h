@@ -53,12 +53,6 @@ public:
     this->alias_ = std::shared_ptr<std::string>(new std::string(alias));
   }
 
-  std::shared_ptr<std::string> get_alias_ptr()
-  {
-    return alias_;
-  }
-
-
   //因为更改了alias_的数据类型，所以要修改原函数
   const char *alias() const
   {
@@ -89,6 +83,7 @@ public:
 
   virtual RC  cell_spec_at(int index, const TupleCellSpec *&spec) const = 0;
 
+  //join tables:每个类增添三个方法，get_record, set_record和set_right_record。入参都是记录record的数组
   virtual void get_record(CompoundRecord &record) const = 0;
   virtual void set_record(CompoundRecord &record) = 0;
   virtual void set_right_record(CompoundRecord &record) = 0;
@@ -106,12 +101,14 @@ public:
     speces_.clear();
   }
 
+  //根据record数组设置内部record_。只取第一个，并用erase删除原数组第一个，表示取走
   void set_record(CompoundRecord &record) override
   {
     this->record_ = record.front();
     record.erase(record.begin());
   }
 
+  //直接调用set_record
   void set_right_record(CompoundRecord &record) override
   {
     set_record(record);
@@ -190,6 +187,7 @@ public:
     return *record_;
   }
 
+  //将内部的record_添加到record中
   void get_record(CompoundRecord &record) const override
   {
     record.emplace_back(record_);
@@ -285,7 +283,7 @@ private:
   Tuple *tuple_ = nullptr;
 };
 
-//创建新类，合并后元组集。直接模仿RowTuple。作用是将两个元组集合并成一个元组集实现join，是select-tables的核心之一
+//创建新类，合并后单个元组。直接模仿RowTuple。作用是将两个元组合并成一个元组实现join，是select-tables、join的核心之一
 //辅助JoinOperator类的实现
 class JoinedTuple : public Tuple {
 public:
@@ -353,7 +351,7 @@ public:
     right_tup_->set_record(record);
   }
 
-  //获取所有元组的单元格总数，要遍历每个元组并调用同名方法
+  //获取整个元组的单元格总数，直接求左右元组单元格的和
   int cell_num() const override
   {
     // int num = 0;
@@ -373,13 +371,17 @@ public:
     //   return rc;
     // }
     // return tuple->cell_at(real_index, cell);
+    //检查索引是否越界
     if (index < 0 || index >= cell_num()) {
       return RC::INVALID_ARGUMENT;
     }
+    //判断所有处于左元组还是右元组
     int num = left_tup_->cell_num();
     if (index < num) {
+      //如果是左元组，则调用左元组的对应方法
       return left_tup_->cell_at(index, cell);
     }
+    //否则是右元组，要减去左元组的差值得到对应的值
     return right_tup_->cell_at(index - num, cell);
   }
   //根据给定的字段查找JoinedTuple中的单元格
@@ -391,6 +393,8 @@ public:
     //   }
     // }
     // return RC::NOTFOUND;
+    //
+    //直接分别在左右元组中查找
     if (RC::SUCCESS != left_tup_->find_cell(field, cell)) {
       return right_tup_->find_cell(field, cell);
     }
@@ -406,6 +410,7 @@ public:
     //   return rc;
     // }
     // return tuple->cell_spec_at(real_index, spec);
+    //跟cell_at方法一样
     if (index < 0 || index >= cell_num()) {
       return RC::INVALID_ARGUMENT;
     }
@@ -417,6 +422,7 @@ public:
   }
   void get_record(CompoundRecord &record) const override
   {
+    //分别取左右元组
     left_tup_->get_record(record);
     right_tup_->get_record(record);
   }
@@ -424,6 +430,7 @@ public:
 private:
   //组合后元组集，是一个动态数组，每个元素是join后元组
   std::vector<RowTuple *> joinedtuple_;
+  //join元组的左右元组
   Tuple *left_tup_;
   Tuple *right_tup_;
 };

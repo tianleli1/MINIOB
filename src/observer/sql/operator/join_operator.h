@@ -20,7 +20,7 @@ See the Mulan PSL v2 for more details. */
 
 #include <vector>
 
-// TODO fixme
+// 执行两表的join操作
 class JoinOperator : public Operator
 {
 public:
@@ -35,7 +35,7 @@ public:
   Tuple * current_tuple() override ;
 
 private:
-  RC fetch_right_table();
+  RC get_right_table();
 
   Operator *left_ = nullptr;
   Operator *right_ = nullptr;
@@ -43,6 +43,6 @@ private:
   JoinedTuple tuple_;
   bool is_first_ = true;//辅助笛卡尔积过程，从左元组开始算
 
-  std::vector<CompoundRecord>::iterator rht_it_;
-  std::vector<CompoundRecord> rht_;  // right hand table
+  std::vector<CompoundRecord>::iterator rht_it_;//右表的迭代器
+  std::vector<CompoundRecord> rht_;//右表，元组的数组的数组
 };

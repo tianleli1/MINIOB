@@ -290,6 +290,7 @@ void tuple_to_string(std::ostream &os, const Tuple &tuple)
   }
 }
 
+//此处修改入参filter_stmt为filter_units，是因为join_tables中调用使用split_filters函数的返回值，为FilterUnits类型的map
 IndexScanOperator *try_to_create_index_scan_operator(const FilterUnits &filter_units)
 {
   //const std::vector<FilterUnit *> &filter_units = filter_stmt->filter_units();
@@ -413,29 +414,38 @@ IndexScanOperator *try_to_create_index_scan_operator(const FilterUnits &filter_u
   return oper;
 }
 
-std::unordered_map<Table *, std::unique_ptr<FilterUnits>> split_filters(
-    const std::vector<Table *> &tables, FilterStmt *filter_stmt)
+//将给定的过滤条件（FilterStmt）按照表进行分割,存储在map中。入参是表数组和(总的)过滤条件(包含过滤条件列表)。目的是分拆这个总的过滤条件
+std::unordered_map<Table*,std::unique_ptr<FilterUnits>> split_filters(const std::vector<Table *> &tables, FilterStmt *filter_stmt)
 {
+  //创建一个存储结果的映射，将每个表映射到一个包含过滤条件的独立容器：表名->过滤条件
   std::unordered_map<Table *, std::unique_ptr<FilterUnits>> res;
+  //遍历所有表，为每个表创建一个空的过滤条件容器
   for (auto table : tables) {
-    res[table] = std::make_unique<FilterUnits>();
+    res[table]=std::make_unique<FilterUnits>();
   }
+  //filter_units()返回一个过滤条件的数组，遍历这个过滤条件数组
   for (auto filter : filter_stmt->filter_units()) {
+    //取左右表达式
     Expression *left = filter->left();
     Expression *right = filter->right();
+    //检查过滤条件是否是形如 FIELD comp VALUE 或者 VALUE comp FIELD 的形式
     if (ExprType::FIELD == left->type() && ExprType::VALUE == right->type()) {
+      //过滤条件类似“age=18”，符合
     } else if (ExprType::FIELD == right->type() && ExprType::VALUE == left->type()) {
+      //过滤条件类似"18=age"，交换一下左右顺序也符合
       std::swap(left, right);
     } else {
+      //否则不符合，跳过这种条件
       continue;
     }
-    // TODO: NEED TO CONSIDER SUB_QUERY
-    // only support FILED comp VALUE or VALUE comp FILED now
-    assert(ExprType::FIELD == left->type() && ExprType::VALUE == right->type());
+    //因此，只支持FIELD comp VALUE 或者 VALUE comp FIELD。不支持其他类型，不考虑子查询
+    //获取左侧字段表达式(字段)，目的是根据字段得到所属的表，然后构造这个表到过滤条件的映射
     auto &left_filed_expr = *static_cast<FieldExpr *>(left);
     const Field &field = left_filed_expr.field();
+    //将过滤条件添加到对应表的过滤条件容器中(一个表可能有多个过滤条件，用列表存储)
     res[const_cast<Table *>(field.table())]->emplace_back(filter);
   }
+  //返回总映射
   return res;
 }
 
@@ -893,14 +903,17 @@ RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_ope
 */
 
 RC ExecuteStage::join_tables(SelectStmt *select_stmt, Operator **joined_scan_oper){
-  const auto &tables = select_stmt->tables();
-  FilterStmt *filter_stmt = select_stmt->filter_stmt();
-  auto table_filters_ht = split_filters(tables, filter_stmt);
+  //获取查询语句中的表列表和过滤条件，作为split_filters函数的入参
+  const auto &tables=select_stmt->tables();
+  FilterStmt *filter_stmt=select_stmt->filter_stmt();
+  //调用split_filters函数将过滤条件按表进行分割，得到表名->(一个或多个)过滤条件的映射
+  auto table_filters = split_filters(tables, filter_stmt);
   //创建存储算子的动态数组，用来迭代产生最终的join后的表扫描算子
   std::vector<Operator *> operators;
-  //便利查询语句中的每个表，如果有索引则利用索引扫描算子，否则使用普通的表扫描算子，将扫描算子添加到动态数组中
+  //遍历查询语句中的每个表，如果有索引则利用索引扫描算子，否则使用普通的表扫描算子，将扫描算子添加到动态数组中
   for (std::vector<Table *>::size_type i = 0; i < tables.size(); i++){
-    Operator *scan_oper=try_to_create_index_scan_operator(*table_filters_ht[tables[i]]);
+    //传入该表的包含所有过滤条件的列表
+    Operator *scan_oper=try_to_create_index_scan_operator(*table_filters[tables[i]]);
     if (scan_oper==nullptr) {
       scan_oper=new TableScanOperator(tables[i]);
     }
